@@ -234,45 +234,42 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   int tab = 0;
+  final pages = const [Dashboard(), LessonsPage(), ReviewPage(), WordsPage()];
   @override
-  Widget build(BuildContext c) {
-    final pages = [
-      const Dashboard(),
-      const LessonsPage(),
-      const ReviewPage(),
-      const PracticePage(),
-      const WordsPage()
-    ];
-    return Directionality(
+  Widget build(BuildContext c) => Directionality(
         textDirection: ui.TextDirection.rtl,
         child: Scaffold(
-            body: pages[tab],
-            bottomNavigationBar: NavigationBar(
-                selectedIndex: tab,
-                onDestinationSelected: (i) => setState(() => tab = i),
-                destinations: const [
-                  NavigationDestination(
-                      icon: Icon(Icons.dashboard_outlined),
-                      selectedIcon: Icon(Icons.dashboard),
-                      label: 'خانه'),
-                  NavigationDestination(
-                      icon: Icon(Icons.menu_book_outlined),
-                      selectedIcon: Icon(Icons.menu_book),
-                      label: 'درس‌ها'),
-                  NavigationDestination(
-                      icon: Icon(Icons.replay_outlined),
-                      selectedIcon: Icon(Icons.replay),
-                      label: 'لایتنر'),
-                  NavigationDestination(
-                      icon: Icon(Icons.edit_outlined),
-                      selectedIcon: Icon(Icons.edit),
-                      label: 'تمرین'),
-                  NavigationDestination(
-                      icon: Icon(Icons.list_alt_outlined),
-                      selectedIcon: Icon(Icons.list_alt),
-                      label: 'واژه‌ها')
-                ])));
-  }
+          appBar: AppBar(title: const Text('Starten Wir A1'), actions: [
+            IconButton(
+                icon: const Icon(Icons.settings),
+                tooltip: 'تنظیمات',
+                onPressed: () => Navigator.push(
+                    c, MaterialPageRoute(builder: (_) => const SettingsPage())))
+          ]),
+          body: pages[tab],
+          bottomNavigationBar: NavigationBar(
+              selectedIndex: tab,
+              onDestinationSelected: (i) => setState(() => tab = i),
+              destinations: const [
+                NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard),
+                    label: 'خانه'),
+                NavigationDestination(
+                    icon: Icon(Icons.menu_book_outlined),
+                    selectedIcon: Icon(Icons.menu_book),
+                    label: 'درس‌ها'),
+                NavigationDestination(
+                    icon: Icon(Icons.inventory_2_outlined),
+                    selectedIcon: Icon(Icons.inventory_2),
+                    label: 'لایتنر'),
+                NavigationDestination(
+                    icon: Icon(Icons.list_alt_outlined),
+                    selectedIcon: Icon(Icons.list_alt),
+                    label: 'واژه‌ها'),
+              ]),
+        ),
+      );
 }
 
 class Header extends StatelessWidget {
@@ -423,7 +420,7 @@ class _LessonsState extends State<LessonsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
               child: Card(
                   child: ListTile(
-                      leading: const Icon(Icons.chevron_left),
+                      leading: const Icon(Icons.chevron_right),
                       title: Text('درس $l — Lektion $l',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text('${count(l)} واژه'),
@@ -489,6 +486,10 @@ class _LearnState extends State<LearnSession> {
               Expanded(
                   child: GestureDetector(
                       onTap: () => setState(() => revealed = !revealed),
+                      onHorizontalDragEnd: (d) {
+                        if (d.primaryVelocity != null)
+                          move(d.primaryVelocity! > 0 ? -1 : 1);
+                      },
                       child: Card(
                           child: Padding(
                               padding: const EdgeInsets.all(20),
@@ -525,7 +526,7 @@ class _LearnState extends State<LearnSession> {
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 FilledButton.icon(
                     onPressed: () => move(-1),
-                    icon: const Icon(Icons.arrow_forward),
+                    icon: const Icon(Icons.arrow_back),
                     label: const Text('قبلی')),
                 IconButton.filledTonal(
                     onPressed: () => playWord(w, online: online),
@@ -538,9 +539,16 @@ class _LearnState extends State<LearnSession> {
                                 ReviewSession(words: [w], title: 'مرور مجدد'))),
                     icon: const Icon(Icons.replay),
                     label: const Text('نیاز به مرور')),
+                OutlinedButton.icon(
+                    onPressed: () => Navigator.push(
+                        c,
+                        MaterialPageRoute(
+                            builder: (_) => WritingPractice(word: w))),
+                    icon: const Icon(Icons.keyboard),
+                    label: const Text('نوشتاری')),
                 FilledButton.icon(
                     onPressed: () => move(1),
-                    icon: const Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_forward),
                     label: const Text('بعدی'))
               ])
             ])));
@@ -672,7 +680,14 @@ class _ReviewSessionState extends State<ReviewSession> {
                           child: const Text('بلد نبودم')),
                       FilledButton(
                           onPressed: () => grade(true),
-                          child: const Text('بلد بودم'))
+                          child: const Text('بلد بودم')),
+                      OutlinedButton.icon(
+                          onPressed: () => Navigator.push(
+                              c,
+                              MaterialPageRoute(
+                                  builder: (_) => WritingPractice(word: w))),
+                          icon: const Icon(Icons.keyboard),
+                          label: const Text('نوشتاری'))
                     ])
             ])));
   }
@@ -687,6 +702,85 @@ class _ReviewSessionState extends State<ReviewSession> {
         show = false;
       });
   }
+}
+
+class WritingPractice extends StatefulWidget {
+  final Word word;
+  const WritingPractice({required this.word, super.key});
+  @override
+  State<WritingPractice> createState() => _WritingPracticeState();
+}
+
+class _WritingPracticeState extends State<WritingPractice> {
+  final controller = TextEditingController();
+  final tts = FlutterTts();
+  bool hint = false, checked = false, correct = false;
+  Future<void> listen() async {
+    await tts.setLanguage('de-DE');
+    await tts.speak(widget.word.german);
+  }
+
+  void check() => setState(() {
+        checked = true;
+        correct = controller.text.trim().toLowerCase() ==
+            widget.word.german.trim().toLowerCase();
+      });
+  @override
+  Widget build(BuildContext c) => Scaffold(
+      appBar: AppBar(title: const Text('تمرین نوشتاری لایتنر')),
+      body: Padding(
+          padding: const EdgeInsets.all(20),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(widget.word.persian,
+                style:
+                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text(widget.word.english,
+                style: TextStyle(color: Colors.grey.shade700)),
+            const SizedBox(height: 18),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              IconButton.filled(
+                  onPressed: listen, icon: const Icon(Icons.volume_up)),
+              const SizedBox(width: 8),
+              const Text('ویس را گوش بده و خود لغت را بنویس')
+            ]),
+            TextField(
+                controller: controller,
+                autofocus: true,
+                textDirection: ui.TextDirection.ltr,
+                decoration: const InputDecoration(
+                    labelText: 'لغت آلمانی را تایپ کن',
+                    border: OutlineInputBorder())),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                  child: OutlinedButton.icon(
+                      onPressed: () => setState(() => hint = !hint),
+                      icon: const Icon(Icons.lightbulb_outline),
+                      label: const Text('راهنما'))),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: FilledButton(
+                      onPressed: check, child: const Text('بررسی')))
+            ]),
+            if (hint)
+              Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Text(
+                      'حروف راهنما: ${widget.word.german.replaceAll(' ', '').split('').join(' • ')}',
+                      textDirection: ui.TextDirection.ltr,
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold))),
+            if (checked)
+              Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Text(
+                      correct ? 'درست است' : 'اشتباه است؛ دوباره تلاش کن',
+                      style: TextStyle(
+                          color: correct ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18))),
+          ])));
 }
 
 class PracticePage extends StatefulWidget {
