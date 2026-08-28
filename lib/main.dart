@@ -237,39 +237,37 @@ class _HomeState extends State<Home> {
   final pages = const [Dashboard(), LessonsPage(), ReviewPage(), WordsPage()];
   @override
   Widget build(BuildContext c) => Directionality(
-        textDirection: ui.TextDirection.rtl,
-        child: Scaffold(
-          appBar: AppBar(title: const Text('Starten Wir A1'), actions: [
-            IconButton(
-                icon: const Icon(Icons.settings),
-                tooltip: 'تنظیمات',
-                onPressed: () => Navigator.push(
-                    c, MaterialPageRoute(builder: (_) => const SettingsPage())))
-          ]),
-          body: pages[tab],
-          bottomNavigationBar: NavigationBar(
-              selectedIndex: tab,
-              onDestinationSelected: (i) => setState(() => tab = i),
-              destinations: const [
-                NavigationDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(Icons.dashboard),
-                    label: 'خانه'),
-                NavigationDestination(
-                    icon: Icon(Icons.menu_book_outlined),
-                    selectedIcon: Icon(Icons.menu_book),
-                    label: 'درس‌ها'),
-                NavigationDestination(
-                    icon: Icon(Icons.inventory_2_outlined),
-                    selectedIcon: Icon(Icons.inventory_2),
-                    label: 'لایتنر'),
-                NavigationDestination(
-                    icon: Icon(Icons.list_alt_outlined),
-                    selectedIcon: Icon(Icons.list_alt),
-                    label: 'واژه‌ها'),
-              ]),
-        ),
-      );
+      textDirection: ui.TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Starten Wir A1'), actions: [
+          IconButton(
+              icon: const Icon(Icons.settings),
+              onPressed: () => Navigator.push(
+                  c, MaterialPageRoute(builder: (_) => const SettingsPage())))
+        ]),
+        body: pages[tab],
+        bottomNavigationBar: NavigationBar(
+            selectedIndex: tab,
+            onDestinationSelected: (i) => setState(() => tab = i),
+            destinations: const [
+              NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard),
+                  label: 'خانه'),
+              NavigationDestination(
+                  icon: Icon(Icons.menu_book_outlined),
+                  selectedIcon: Icon(Icons.menu_book),
+                  label: 'درس‌ها'),
+              NavigationDestination(
+                  icon: Icon(Icons.inventory_2_outlined),
+                  selectedIcon: Icon(Icons.inventory_2),
+                  label: 'لایتنر'),
+              NavigationDestination(
+                  icon: Icon(Icons.list_alt_outlined),
+                  selectedIcon: Icon(Icons.list_alt),
+                  label: 'واژه‌ها'),
+            ]),
+      ));
 }
 
 class Header extends StatelessWidget {
@@ -490,39 +488,44 @@ class _LearnState extends State<LearnSession> {
                         if (d.primaryVelocity != null)
                           move(d.primaryVelocity! > 0 ? -1 : 1);
                       },
-                      child: Card(
-                          child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Chip(
-                                        label: Text(typeLabel(w)),
-                                        backgroundColor:
-                                            wordColor(w).withOpacity(.14)),
-                                    const SizedBox(height: 20),
-                                    FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        child: Text(w.display,
-                                            textDirection: ui.TextDirection.ltr,
-                                            maxLines: 2,
-                                            style: TextStyle(
-                                                fontSize: 52,
-                                                fontWeight: FontWeight.w800,
-                                                color: wordColor(w)))),
-                                    Text(w.pronunciation),
-                                    const SizedBox(height: 18),
-                                    if (revealed) ...[
-                                      const Divider(),
-                                      Text(w.persian,
-                                          style: const TextStyle(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.bold)),
-                                      Text(w.english)
-                                    ] else
-                                      const Text('برای نمایش معنی لمس کن',
-                                          style: TextStyle(color: Colors.grey))
-                                  ]))))),
+                      child: SizedBox(
+                          width: double.infinity,
+                          child: Card(
+                              child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Chip(
+                                            label: Text(typeLabel(w)),
+                                            backgroundColor:
+                                                wordColor(w).withOpacity(.14)),
+                                        const SizedBox(height: 20),
+                                        FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(w.display,
+                                                textDirection:
+                                                    ui.TextDirection.ltr,
+                                                maxLines: 2,
+                                                style: TextStyle(
+                                                    fontSize: 52,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: wordColor(w)))),
+                                        Text(w.pronunciation),
+                                        const SizedBox(height: 18),
+                                        if (revealed) ...[
+                                          const Divider(),
+                                          Text(w.persian,
+                                              style: const TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.bold)),
+                                          Text(w.english)
+                                        ] else
+                                          const Text('برای نمایش معنی لمس کن',
+                                              style:
+                                                  TextStyle(color: Colors.grey))
+                                      ])))))),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 FilledButton.icon(
                     onPressed: () => move(-1),
@@ -531,21 +534,6 @@ class _LearnState extends State<LearnSession> {
                 IconButton.filledTonal(
                     onPressed: () => playWord(w, online: online),
                     icon: const Icon(Icons.volume_up)),
-                OutlinedButton.icon(
-                    onPressed: () => Navigator.push(
-                        c,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                ReviewSession(words: [w], title: 'مرور مجدد'))),
-                    icon: const Icon(Icons.replay),
-                    label: const Text('نیاز به مرور')),
-                OutlinedButton.icon(
-                    onPressed: () => Navigator.push(
-                        c,
-                        MaterialPageRoute(
-                            builder: (_) => WritingPractice(word: w))),
-                    icon: const Icon(Icons.keyboard),
-                    label: const Text('نوشتاری')),
                 FilledButton.icon(
                     onPressed: () => move(1),
                     icon: const Icon(Icons.arrow_forward),
@@ -582,44 +570,78 @@ class _ReviewState extends State<ReviewPage> {
               w.nextReview == null ||
               w.nextReview!.isBefore(DateTime.now())))
       .length;
-  void open(int b) {
+  void choose(int b) {
     final list = b < 0 ? all : all.where((w) => w.box == b).toList();
-    Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => ReviewSession(
-                words: list, title: b < 0 ? 'مرور همه' : 'مرور باکس $b')));
+    showModalBottomSheet(
+        context: context,
+        builder: (sheet) => SafeArea(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(b < 0 ? 'مرور همهٔ واژه‌ها' : 'مرور باکس $b',
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold))),
+              ListTile(
+                  leading: const Icon(Icons.style),
+                  title: const Text('مرور عادی'),
+                  subtitle: const Text('نمایش پاسخ و انتخاب بلد بودم/نبودم'),
+                  onTap: () {
+                    Navigator.pop(sheet);
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => ReviewSession(
+                                words: list,
+                                title: b < 0 ? 'مرور همه' : 'مرور باکس $b')));
+                  }),
+              ListTile(
+                  leading: const Icon(Icons.keyboard),
+                  title: const Text('مرور نوشتاری'),
+                  subtitle:
+                      const Text('فارسی و انگلیسی را ببین و آلمانی را تایپ کن'),
+                  onTap: () {
+                    Navigator.pop(sheet);
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => WritingReviewSession(
+                                words: list,
+                                title:
+                                    'نوشتاری — ${b < 0 ? 'همه' : 'باکس $b'}')));
+                  })
+            ])));
   }
 
   @override
   Widget build(BuildContext c) => SafeArea(
           child: ListView(children: [
         const Header('لایتنر',
-            subtitle: 'هر باکس را جداگانه ببین و هر زمان مرور مجدد کن'),
+            subtitle: 'هر باکس را انتخاب کن و نوع مرور را تعیین کن'),
         Padding(
             padding: const EdgeInsets.all(12),
             child: Wrap(spacing: 8, runSpacing: 8, children: [
               for (int b = 0; b <= 5; b++)
                 SizedBox(
-                    width: 108,
+                    width: 112,
                     child: Card(
                         child: InkWell(
-                            onTap: () => open(b),
+                            onTap: () => choose(b),
                             child: Padding(
                                 padding: const EdgeInsets.all(10),
                                 child: Column(children: [
+                                  Icon(Icons.inventory_2,
+                                      color: Theme.of(c).colorScheme.primary),
                                   Text('باکس $b',
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   Text('${total(b)} واژه'),
-                                  Text('${ready(b)} آماده مرور'),
-                                  const Icon(Icons.play_circle_outline)
+                                  Text('${ready(b)} آماده مرور')
                                 ])))))
             ])),
         Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: FilledButton.icon(
-                onPressed: all.isEmpty ? null : () => open(-1),
+                onPressed: all.isEmpty ? null : () => choose(-1),
                 icon: const Icon(Icons.play_arrow),
                 label: const Text('مرور همه')))
       ]));
@@ -648,25 +670,38 @@ class _ReviewSessionState extends State<ReviewSession> {
             child: Column(children: [
               Text('کارت ${i + 1} از ${widget.words.length}'),
               Expanded(
-                  child: Card(
-                      child: Center(
-                          child:
-                              Column(mainAxisSize: MainAxisSize.min, children: [
-                FittedBox(
-                    child: Text(w.display,
-                        textDirection: ui.TextDirection.ltr,
-                        style: TextStyle(
-                            fontSize: 44,
-                            fontWeight: FontWeight.bold,
-                            color: wordColor(w)))),
-                if (show) ...[
-                  const SizedBox(height: 20),
-                  Text(w.persian,
-                      style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold)),
-                  Text(w.english)
-                ]
-              ])))),
+                  child: GestureDetector(
+                      onHorizontalDragEnd: (d) {
+                        if (d.primaryVelocity != null)
+                          setState(() => i = (i +
+                                  (d.primaryVelocity! > 0 ? -1 : 1) +
+                                  widget.words.length) %
+                              widget.words.length);
+                      },
+                      child: SizedBox(
+                          width: double.infinity,
+                          child: Card(
+                              child: Center(
+                                  child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(w.display,
+                                        textDirection: ui.TextDirection.ltr,
+                                        style: TextStyle(
+                                            fontSize: 46,
+                                            fontWeight: FontWeight.bold,
+                                            color: wordColor(w)))),
+                                if (show) ...[
+                                  const SizedBox(height: 20),
+                                  Text(w.persian,
+                                      style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold)),
+                                  Text(w.english)
+                                ]
+                              ])))))),
               if (!show)
                 FilledButton(
                     onPressed: () => setState(() => show = true),
@@ -680,14 +715,7 @@ class _ReviewSessionState extends State<ReviewSession> {
                           child: const Text('بلد نبودم')),
                       FilledButton(
                           onPressed: () => grade(true),
-                          child: const Text('بلد بودم')),
-                      OutlinedButton.icon(
-                          onPressed: () => Navigator.push(
-                              c,
-                              MaterialPageRoute(
-                                  builder: (_) => WritingPractice(word: w))),
-                          icon: const Icon(Icons.keyboard),
-                          label: const Text('نوشتاری'))
+                          child: const Text('بلد بودم'))
                     ])
             ])));
   }
@@ -704,83 +732,96 @@ class _ReviewSessionState extends State<ReviewSession> {
   }
 }
 
-class WritingPractice extends StatefulWidget {
-  final Word word;
-  const WritingPractice({required this.word, super.key});
+class WritingReviewSession extends StatefulWidget {
+  final List<Word> words;
+  final String title;
+  const WritingReviewSession(
+      {required this.words, required this.title, super.key});
   @override
-  State<WritingPractice> createState() => _WritingPracticeState();
+  State<WritingReviewSession> createState() => _WritingReviewState();
 }
 
-class _WritingPracticeState extends State<WritingPractice> {
-  final controller = TextEditingController();
+class _WritingReviewState extends State<WritingReviewSession> {
+  int i = 0;
+  String typed = '';
+  bool hint = false;
+  final input = TextEditingController();
   final tts = FlutterTts();
-  bool hint = false, checked = false, correct = false;
+  Word get w => widget.words[i];
   Future<void> listen() async {
     await tts.setLanguage('de-DE');
-    await tts.speak(widget.word.german);
+    await tts.speak(w.german);
   }
 
-  void check() => setState(() {
-        checked = true;
-        correct = controller.text.trim().toLowerCase() ==
-            widget.word.german.trim().toLowerCase();
+  void addLetter(String ch) {
+    setState(() {
+      typed += ch;
+      input.text = typed;
+    });
+  }
+
+  Future<void> submit() async {
+    final ok = typed.trim().toLowerCase() == w.german.trim().toLowerCase();
+    await VocabularyDb.instance.grade(w, ok);
+    if (i + 1 >= widget.words.length) {
+      if (mounted) Navigator.pop(context);
+    } else
+      setState(() {
+        i++;
+        typed = '';
+        input.clear();
+        hint = false;
       });
+  }
+
   @override
-  Widget build(BuildContext c) => Scaffold(
-      appBar: AppBar(title: const Text('تمرین نوشتاری لایتنر')),
-      body: Padding(
-          padding: const EdgeInsets.all(20),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text(widget.word.persian,
-                style:
-                    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            Text(widget.word.english,
-                style: TextStyle(color: Colors.grey.shade700)),
-            const SizedBox(height: 18),
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+  Widget build(BuildContext c) {
+    if (widget.words.isEmpty)
+      return const Scaffold(body: Center(child: Text('این باکس خالی است')));
+    final letters = w.german.replaceAll(' ', '').split('')..shuffle();
+    return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(children: [
+              Text('نوشتاری ${i + 1} از ${widget.words.length}'),
+              const SizedBox(height: 12),
+              Text(w.persian,
+                  style: const TextStyle(
+                      fontSize: 23, fontWeight: FontWeight.bold)),
+              Text(w.english, style: TextStyle(color: Colors.grey.shade700)),
               IconButton.filled(
                   onPressed: listen, icon: const Icon(Icons.volume_up)),
-              const SizedBox(width: 8),
-              const Text('ویس را گوش بده و خود لغت را بنویس')
-            ]),
-            TextField(
-                controller: controller,
-                autofocus: true,
-                textDirection: ui.TextDirection.ltr,
-                decoration: const InputDecoration(
-                    labelText: 'لغت آلمانی را تایپ کن',
-                    border: OutlineInputBorder())),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(
-                  child: OutlinedButton.icon(
-                      onPressed: () => setState(() => hint = !hint),
-                      icon: const Icon(Icons.lightbulb_outline),
-                      label: const Text('راهنما'))),
-              const SizedBox(width: 10),
-              Expanded(
-                  child: FilledButton(
-                      onPressed: check, child: const Text('بررسی')))
-            ]),
-            if (hint)
-              Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: Text(
-                      'حروف راهنما: ${widget.word.german.replaceAll(' ', '').split('').join(' • ')}',
-                      textDirection: ui.TextDirection.ltr,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold))),
-            if (checked)
-              Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: Text(
-                      correct ? 'درست است' : 'اشتباه است؛ دوباره تلاش کن',
-                      style: TextStyle(
-                          color: correct ? Colors.green : Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18))),
-          ])));
+              TextField(
+                  controller: input,
+                  autofocus: true,
+                  textDirection: ui.TextDirection.ltr,
+                  decoration: const InputDecoration(
+                      labelText: 'آلمانی را تایپ کن',
+                      border: OutlineInputBorder())),
+              Row(children: [
+                Expanded(
+                    child: OutlinedButton.icon(
+                        onPressed: () => setState(() => hint = !hint),
+                        icon: const Icon(Icons.lightbulb_outline),
+                        label: const Text('راهنما'))),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: FilledButton(
+                        onPressed: submit, child: const Text('بررسی')))
+              ]),
+              if (hint)
+                Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Wrap(spacing: 6, runSpacing: 6, children: [
+                      for (final ch in letters)
+                        ActionChip(
+                            label:
+                                Text(ch, textDirection: ui.TextDirection.ltr),
+                            onPressed: () => addLetter(ch))
+                    ]))
+            ])));
+  }
 }
 
 class PracticePage extends StatefulWidget {
