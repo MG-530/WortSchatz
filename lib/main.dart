@@ -622,7 +622,7 @@ class _ReviewState extends State<ReviewPage> {
             child: Wrap(spacing: 8, runSpacing: 8, children: [
               for (int b = 0; b <= 5; b++)
                 SizedBox(
-                    width: 112,
+                    width: 160,
                     child: Card(
                         child: InkWell(
                             onTap: () => choose(b),
@@ -744,7 +744,7 @@ class WritingReviewSession extends StatefulWidget {
 class _WritingReviewState extends State<WritingReviewSession> {
   int i = 0;
   String typed = '';
-  bool hint = false;
+  bool hint = false, checked = false, correct = false;
   final input = TextEditingController();
   final tts = FlutterTts();
   Word get w => widget.words[i];
@@ -754,24 +754,46 @@ class _WritingReviewState extends State<WritingReviewSession> {
   }
 
   void addLetter(String ch) {
+    if (checked) return;
     setState(() {
       typed += ch;
       input.text = typed;
+      input.selection = TextSelection.collapsed(offset: input.text.length);
     });
   }
 
   Future<void> submit() async {
+    if (checked) return;
     final ok = typed.trim().toLowerCase() == w.german.trim().toLowerCase();
     await VocabularyDb.instance.grade(w, ok);
+    setState(() {
+      checked = true;
+      correct = ok;
+    });
+  }
+
+  Future<void> unknown() async {
+    if (checked) return;
+    await VocabularyDb.instance.grade(w, false);
+    setState(() {
+      checked = true;
+      correct = false;
+    });
+  }
+
+  void next() {
     if (i + 1 >= widget.words.length) {
-      if (mounted) Navigator.pop(context);
-    } else
-      setState(() {
-        i++;
-        typed = '';
-        input.clear();
-        hint = false;
-      });
+      Navigator.pop(context);
+      return;
+    }
+    setState(() {
+      i++;
+      typed = '';
+      input.clear();
+      hint = false;
+      checked = false;
+      correct = false;
+    });
   }
 
   @override
@@ -795,6 +817,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
               TextField(
                   controller: input,
                   autofocus: true,
+                  enabled: !checked,
                   textDirection: ui.TextDirection.ltr,
                   decoration: const InputDecoration(
                       labelText: 'آلمانی را تایپ کن',
@@ -802,13 +825,15 @@ class _WritingReviewState extends State<WritingReviewSession> {
               Row(children: [
                 Expanded(
                     child: OutlinedButton.icon(
-                        onPressed: () => setState(() => hint = !hint),
+                        onPressed:
+                            checked ? null : () => setState(() => hint = !hint),
                         icon: const Icon(Icons.lightbulb_outline),
                         label: const Text('راهنما'))),
                 const SizedBox(width: 8),
                 Expanded(
                     child: FilledButton(
-                        onPressed: submit, child: const Text('بررسی')))
+                        onPressed: checked ? null : submit,
+                        child: const Text('بررسی')))
               ]),
               if (hint)
                 Padding(
@@ -819,7 +844,42 @@ class _WritingReviewState extends State<WritingReviewSession> {
                             label:
                                 Text(ch, textDirection: ui.TextDirection.ltr),
                             onPressed: () => addLetter(ch))
+                    ])),
+              if (checked)
+                Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: Column(children: [
+                      Text(
+                          correct
+                              ? 'درست است'
+                              : 'غلط است — واژه به باکس اول منتقل شد',
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: correct ? Colors.green : Colors.red)),
+                      const SizedBox(height: 8),
+                      Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (!correct)
+                              OutlinedButton.icon(
+                                  onPressed: null,
+                                  icon: const Icon(Icons.close),
+                                  label: const Text('بلد نیستم')),
+                            const SizedBox(width: 8),
+                            FilledButton.icon(
+                                onPressed: next,
+                                icon: const Icon(Icons.arrow_forward),
+                                label: Text(i + 1 >= widget.words.length
+                                    ? 'پایان'
+                                    : 'بعدی'))
+                          ])
                     ]))
+              else
+                OutlinedButton.icon(
+                    onPressed: unknown,
+                    icon: const Icon(Icons.close),
+                    label: const Text('بلد نیستم'))
             ])));
   }
 }
