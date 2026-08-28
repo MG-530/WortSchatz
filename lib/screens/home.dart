@@ -19,46 +19,42 @@ class _HomeState extends State<Home> {
   int tab = 0;
   final pages = const [Dashboard(), LessonsPage(), ReviewPage(), WordsPage()];
 
-@override
-  Widget build(BuildContext c) {
-    return Directionality(
+  @override
+  Widget build(BuildContext c) => Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-            title: const Text('Starten Wir A1'),
-            actions: [
-              IconButton(
-                  icon: const Icon(Icons.settings),
-                  onPressed: () => Navigator.push(
-                      c,
-                      MaterialPageRoute(
-                          builder: (_) => const SettingsPage())))
-            ]),
-        body: pages[tab],
-        bottomNavigationBar: NavigationBar(
-            selectedIndex: tab,
-            onDestinationSelected: (i) => setState(() => tab = i),
-            destinations: const [
-              NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard),
-                  label: 'خانه'),
-              NavigationDestination(
-                  icon: Icon(Icons.menu_book_outlined),
-                  selectedIcon: Icon(Icons.menu_book),
-                  label: 'درس‌ها'),
-              NavigationDestination(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  selectedIcon: Icon(Icons.inventory_2),
-                  label: 'لایتنر'),
-              NavigationDestination(
-                  icon: Icon(Icons.list_alt_outlined),
-                  selectedIcon: Icon(Icons.list_alt),
-                  label: 'واژه‌ها'),
-            ]),
-      ),
-    );
-  }
+          appBar: AppBar(
+              title: const Text('Starten Wir A1'),
+              actions: [
+                IconButton(
+                    icon: const Icon(Icons.settings),
+                    onPressed: () => Navigator.push(
+                        c,
+                        MaterialPageRoute(
+                            builder: (_) => const SettingsPage())))
+              ]),
+          body: pages[tab],
+          bottomNavigationBar: NavigationBar(
+              selectedIndex: tab,
+              onDestinationSelected: (i) => setState(() => tab = i),
+              destinations: const [
+                NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard),
+                    label: 'خانه'),
+                NavigationDestination(
+                    icon: Icon(Icons.menu_book_outlined),
+                    selectedIcon: Icon(Icons.menu_book),
+                    label: 'درس‌ها'),
+                NavigationDestination(
+                    icon: Icon(Icons.inventory_2_outlined),
+                    selectedIcon: Icon(Icons.inventory_2),
+                    label: 'لایتنر'),
+                NavigationDestination(
+                    icon: Icon(Icons.list_alt_outlined),
+                    selectedIcon: Icon(Icons.list_alt),
+                    label: 'واژه‌ها'),
+              ])));
 }
 
 class Dashboard extends StatefulWidget {
@@ -90,8 +86,18 @@ class _DashboardState extends State<Dashboard> {
       child: RefreshIndicator(
           onRefresh: load,
           child: ListView(children: [
-            const Header('Starten Wir A1',
-                subtitle: 'یادگیری آلمانی با مرور هوشمند'),
+            Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Starten Wir A1',
+                      style: Theme.of(c)
+                          .textTheme
+                          .headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 8),
+                  Text('یادگیری آلمانی با مرور هوشمند',
+                      style: const TextStyle(color: Colors.grey)),
+                ])),
             Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Card(
@@ -119,7 +125,7 @@ class _DashboardState extends State<Dashboard> {
                     ])),
             const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text('نمای شماتیک جعبه‌های لایتنر',
+                child: Text('نمایششماتیک جعبوهای لایتنر',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
             SizedBox(
                 height: 120,

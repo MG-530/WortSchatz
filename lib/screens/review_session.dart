@@ -20,12 +20,13 @@ class ReviewSession extends StatefulWidget {
 class _ReviewSessionState extends State<ReviewSession> {
   int i = 0;
   bool show = false;
+  bool? lastCardGrade;
 
   @override
   Widget build(BuildContext c) {
     if (widget.words.isEmpty)
       return const Scaffold(
-          body: Center(child: Text('واژهٔ آماده‌ای برای مرور نیست')));
+          body: Center(child: Text('واژهٔ آمدهی برای مرور نیست')));
     final w = widget.words[i];
     return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
@@ -68,54 +69,51 @@ class _ReviewSessionState extends State<ReviewSession> {
                               ])))))),
               if (!show)
                 FilledButton(
-                    onPressed: () => setState(() => show = true),
-                    child: const Text('نمایش پاسخ'))
-              else
-                Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      OutlinedButton(
-                          onPressed: () => grade(false),
-                          child: const Text('بلد نبودم')),
-                      FilledButton(
-                          onPressed: () => grade(true),
-                          child: const Text('بلد بودم'))
-                    ])
+                    onPressed: () => _handleAnswer(false),
+                    child: const Text('بلد نبودم')),
+              FilledButton(
+                  onPressed: () => _handleAnswer(true),
+                  child: const Text('بلد بودم'))
             ])));
   }
 
-  Future<void> grade(bool ok) async {
-    await VocabularyDb.instance.grade(widget.words[i], ok);
-    if (i + 1 >= widget.words.length) {
-      if (widget.extra.isNotEmpty && mounted) {
-        final go = await showDialog<bool>(
-            context: context,
-            builder: (d) => AlertDialog(
-                    title: const Text('مرور آماده تمام شد'),
-                    content: const Text(
-                        'واژه‌های آماده‌نشده را هم مرور می‌کنی؟ در این حالت باکس‌ها تغییر نمی‌کنند.'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(d, false),
-                          child: const Text('خیر')),
-                      FilledButton(
-                          onPressed: () => Navigator.pop(d, true),
-                          child: const Text('بله'))
-                    ]));
-        if (go == true && mounted) {
-          Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => ReviewSession(
-                      words: widget.extra,
-                      title: 'مرور غیرآماده',
-                      extra: const [])));
-        } else if (mounted) Navigator.pop(context);
-      } else if (mounted) Navigator.pop(context);
-    } else
+  void _handleAnswer(bool known) {
+    if (widget.words.length > 1 || i + 1 < widget.words.length) {
+      // Not at last card - just go to next
       setState(() {
         i++;
-        show = false;
       });
+    } else {
+      // At last card - store grade and show dialog
+      _showEndOfReviewDialog(known);
+    }
+  }
+
+  Future<void> _showEndOfReviewDialog(bool known) async {
+    if (widget.extra.isNotEmpty && mounted) {
+      final go = await showDialog<bool>(
+          context: context,
+          builder: (d) => AlertDialog(
+                  title: const Text('مرور آمده تمام شد'),
+                  content: const Text(
+                      'واژه‌های آماده‌نشده را هم مرور می‌کنی؟ در این حالت باکس‌ها تغییر نمیRender.')),
+          );
+      if (go == true && mounted) {
+        // Navigate to extra words review
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (_) => ReviewSession(
+                    words: widget.extra,
+                    title: 'مرور غیرآماده',
+                    extra: const [])));
+      } else if (mounted) Navigator.pop(context);
+    } else if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    lastCardGrade = null;
+    super.dispose();
   }
 }
