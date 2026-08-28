@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as pth;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -126,12 +128,34 @@ class VocabularyDb {
     return rows.map(Word.fromMap).toList();
   }
 
+  Future<bool> isDue(Word w) async {
+    if (w.box == 0 || w.nextReview == null) return true;
+    return !w.nextReview!.isAfter(DateTime.now());
+  }
+
   Future<void> grade(Word w, bool known) async {
-    final box = known ? min(5, max(1, w.box + 1)) : 1;
+    if (!await isDue(w)) return;
+    final box = known ? min(5, w.box + 1) : max(0, w.box - 1);
     final days = [0, 1, 2, 4, 7, 14][box];
-    final next = DateTime.now().add(Duration(days: days)).toIso8601String();
+    final next = box == 0
+        ? null
+        : DateTime.now().add(Duration(days: days)).toIso8601String();
     await _db!.update('words', {'box': box, 'next_review': next},
         where: 'id = ?', whereArgs: [w.id]);
+  }
+
+  Future<List<Map<String, dynamic>>> backupRows() async =>
+      await _db!.query('words', orderBy: 'id');
+  Future<void> restoreRows(List<dynamic> rows) async {
+    final batch = _db!.batch();
+    for (final raw in rows) {
+      final x = Map<String, dynamic>.from(raw as Map);
+      if (x['id'] != null)
+        batch.update(
+            'words', {'box': x['box'] ?? 0, 'next_review': x['next_review']},
+            where: 'id = ?', whereArgs: [x['id']]);
+    }
+    await batch.commit(noResult: true);
   }
 
   Future<Map<String, int>> stats() async {
@@ -156,7 +180,7 @@ class StartenWirApp extends StatelessWidget {
       theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xff6750a4), brightness: Brightness.light),
+              seedColor: const Color(0xff102a43), brightness: Brightness.light),
           textTheme: GoogleFonts.vazirmatnTextTheme()),
       home: const Home());
 }
@@ -207,8 +231,14 @@ class AppSettings {
       (await SharedPreferences.getInstance()).getBool('onlineAudio') ?? false;
   static Future<String> get reminder async =>
       (await SharedPreferences.getInstance()).getString('reminder') ?? '20:00';
-  static Future<void> set(String key, Object value) async =>
-      (await SharedPreferences.getInstance()).setBool(key, value as bool);
+  static Future<String> get course async =>
+      (await SharedPreferences.getInstance()).getString('course') ??
+      'Starten Wir';
+  static Future<String> get book async =>
+      (await SharedPreferences.getInstance()).getString('book') ??
+      'Starten Wir A1';
+  static Future<String> get level async =>
+      (await SharedPreferences.getInstance()).getString('level') ?? 'A1';
 }
 
 Future<void> playWord(Word w, {bool online = false}) async {
@@ -512,7 +542,6 @@ class _LearnState extends State<LearnSession> {
                                                     fontSize: 52,
                                                     fontWeight: FontWeight.w800,
                                                     color: wordColor(w)))),
-                                        Text(w.pronunciation),
                                         const SizedBox(height: 18),
                                         if (revealed) ...[
                                           const Divider(),
@@ -562,16 +591,16 @@ class _ReviewState extends State<ReviewPage> {
     if (mounted) setState(() {});
   }
 
+  bool due(Word w) =>
+      w.box == 0 ||
+      w.nextReview == null ||
+      !w.nextReview!.isAfter(DateTime.now());
   int total(int b) => all.where((w) => w.box == b).length;
-  int ready(int b) => all
-      .where((w) =>
-          w.box == b &&
-          (b == 0 ||
-              w.nextReview == null ||
-              w.nextReview!.isBefore(DateTime.now())))
-      .length;
+  int ready(int b) => all.where((w) => w.box == b && due(w)).length;
   void choose(int b) {
-    final list = b < 0 ? all : all.where((w) => w.box == b).toList();
+    final selected = b < 0 ? all : all.where((w) => w.box == b).toList();
+    final readyWords = selected.where(due).toList();
+    final later = selected.where((w) => !due(w)).toList();
     showModalBottomSheet(
         context: context,
         builder: (sheet) => SafeArea(
@@ -584,28 +613,28 @@ class _ReviewState extends State<ReviewPage> {
               ListTile(
                   leading: const Icon(Icons.style),
                   title: const Text('مرور عادی'),
-                  subtitle: const Text('نمایش پاسخ و انتخاب بلد بودم/نبودم'),
+                  subtitle: Text('${readyWords.length} واژه آماده مرور'),
                   onTap: () {
                     Navigator.pop(sheet);
                     Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (_) => ReviewSession(
-                                words: list,
-                                title: b < 0 ? 'مرور همه' : 'مرور باکس $b')));
+                                words: readyWords,
+                                title: b < 0 ? 'مرور آماده' : 'مرور باکس $b',
+                                extra: later)));
                   }),
               ListTile(
                   leading: const Icon(Icons.keyboard),
                   title: const Text('مرور نوشتاری'),
-                  subtitle:
-                      const Text('فارسی و انگلیسی را ببین و آلمانی را تایپ کن'),
+                  subtitle: Text('${readyWords.length} واژه آماده نوشتاری'),
                   onTap: () {
                     Navigator.pop(sheet);
                     Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (_) => WritingReviewSession(
-                                words: list,
+                                words: readyWords,
                                 title:
                                     'نوشتاری — ${b < 0 ? 'همه' : 'باکس $b'}')));
                   })
@@ -616,7 +645,7 @@ class _ReviewState extends State<ReviewPage> {
   Widget build(BuildContext c) => SafeArea(
           child: ListView(children: [
         const Header('لایتنر',
-            subtitle: 'هر باکس را انتخاب کن و نوع مرور را تعیین کن'),
+            subtitle: 'فقط واژه‌های آماده، طبق زمان‌بندی مرور می‌شوند'),
         Padding(
             padding: const EdgeInsets.all(12),
             child: Wrap(spacing: 8, runSpacing: 8, children: [
@@ -627,10 +656,11 @@ class _ReviewState extends State<ReviewPage> {
                         child: InkWell(
                             onTap: () => choose(b),
                             child: Padding(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.all(12),
                                 child: Column(children: [
                                   Icon(Icons.inventory_2,
-                                      color: Theme.of(c).colorScheme.primary),
+                                      color: Theme.of(c).colorScheme.primary,
+                                      size: 30),
                                   Text('باکس $b',
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
@@ -643,14 +673,19 @@ class _ReviewState extends State<ReviewPage> {
             child: FilledButton.icon(
                 onPressed: all.isEmpty ? null : () => choose(-1),
                 icon: const Icon(Icons.play_arrow),
-                label: const Text('مرور همه')))
+                label: const Text('مرور آماده')))
       ]));
 }
 
 class ReviewSession extends StatefulWidget {
   final List<Word> words;
   final String title;
-  const ReviewSession({required this.words, required this.title, super.key});
+  final List<Word> extra;
+  const ReviewSession(
+      {required this.words,
+      required this.title,
+      this.extra = const [],
+      super.key});
   @override
   State<ReviewSession> createState() => _ReviewSessionState();
 }
@@ -661,7 +696,8 @@ class _ReviewSessionState extends State<ReviewSession> {
   @override
   Widget build(BuildContext c) {
     if (widget.words.isEmpty)
-      return const Scaffold(body: Center(child: Text('این باکس خالی است')));
+      return const Scaffold(
+          body: Center(child: Text('واژهٔ آماده‌ای برای مرور نیست')));
     final w = widget.words[i];
     return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
@@ -723,7 +759,31 @@ class _ReviewSessionState extends State<ReviewSession> {
   Future<void> grade(bool ok) async {
     await VocabularyDb.instance.grade(widget.words[i], ok);
     if (i + 1 >= widget.words.length) {
-      if (mounted) Navigator.pop(context);
+      if (widget.extra.isNotEmpty && mounted) {
+        final go = await showDialog<bool>(
+            context: context,
+            builder: (d) => AlertDialog(
+                    title: const Text('مرور آماده تمام شد'),
+                    content: const Text(
+                        'واژه‌های آماده‌نشده را هم مرور می‌کنی؟ در این حالت باکس‌ها تغییر نمی‌کنند.'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(d, false),
+                          child: const Text('خیر')),
+                      FilledButton(
+                          onPressed: () => Navigator.pop(d, true),
+                          child: const Text('بله'))
+                    ]));
+        if (go == true && mounted) {
+          Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => ReviewSession(
+                      words: widget.extra,
+                      title: 'مرور غیرآماده',
+                      extra: const [])));
+        } else if (mounted) Navigator.pop(context);
+      } else if (mounted) Navigator.pop(context);
     } else
       setState(() {
         i++;
@@ -747,7 +807,18 @@ class _WritingReviewState extends State<WritingReviewSession> {
   bool hint = false, checked = false, correct = false;
   final input = TextEditingController();
   final tts = FlutterTts();
+  late List<String> letters;
   Word get w => widget.words[i];
+  @override
+  void initState() {
+    super.initState();
+    lettersForWord();
+  }
+
+  void lettersForWord() {
+    letters = w.german.replaceAll(' ', '').split('')..shuffle();
+  }
+
   Future<void> listen() async {
     await tts.setLanguage('de-DE');
     await tts.speak(w.german);
@@ -758,7 +829,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
     setState(() {
       typed += ch;
       input.text = typed;
-      input.selection = TextSelection.collapsed(offset: input.text.length);
+      input.selection = TextSelection.collapsed(offset: typed.length);
     });
   }
 
@@ -793,14 +864,15 @@ class _WritingReviewState extends State<WritingReviewSession> {
       hint = false;
       checked = false;
       correct = false;
+      lettersForWord();
     });
   }
 
   @override
   Widget build(BuildContext c) {
     if (widget.words.isEmpty)
-      return const Scaffold(body: Center(child: Text('این باکس خالی است')));
-    final letters = w.german.replaceAll(' ', '').split('')..shuffle();
+      return const Scaffold(
+          body: Center(child: Text('واژهٔ آماده‌ای برای مرور نیست')));
     return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
         body: Padding(
@@ -822,6 +894,13 @@ class _WritingReviewState extends State<WritingReviewSession> {
                   decoration: const InputDecoration(
                       labelText: 'آلمانی را تایپ کن',
                       border: OutlineInputBorder())),
+              if (hint)
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  for (final ch in letters)
+                    ActionChip(
+                        label: Text(ch, textDirection: ui.TextDirection.ltr),
+                        onPressed: () => addLetter(ch))
+                ]),
               Row(children: [
                 Expanded(
                     child: OutlinedButton.icon(
@@ -835,51 +914,27 @@ class _WritingReviewState extends State<WritingReviewSession> {
                         onPressed: checked ? null : submit,
                         child: const Text('بررسی')))
               ]),
-              if (hint)
-                Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: Wrap(spacing: 6, runSpacing: 6, children: [
-                      for (final ch in letters)
-                        ActionChip(
-                            label:
-                                Text(ch, textDirection: ui.TextDirection.ltr),
-                            onPressed: () => addLetter(ch))
-                    ])),
-              if (checked)
-                Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: Column(children: [
-                      Text(
-                          correct
-                              ? 'درست است'
-                              : 'غلط است — واژه به باکس اول منتقل شد',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: correct ? Colors.green : Colors.red)),
-                      const SizedBox(height: 8),
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (!correct)
-                              OutlinedButton.icon(
-                                  onPressed: null,
-                                  icon: const Icon(Icons.close),
-                                  label: const Text('بلد نیستم')),
-                            const SizedBox(width: 8),
-                            FilledButton.icon(
-                                onPressed: next,
-                                icon: const Icon(Icons.arrow_forward),
-                                label: Text(i + 1 >= widget.words.length
-                                    ? 'پایان'
-                                    : 'بعدی'))
-                          ])
-                    ]))
-              else
+              if (!checked)
                 OutlinedButton.icon(
                     onPressed: unknown,
                     icon: const Icon(Icons.close),
                     label: const Text('بلد نیستم'))
+              else
+                Column(children: [
+                  Text(
+                      correct
+                          ? 'درست است'
+                          : 'غلط است — واژه به باکس قبلی برگشت',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: correct ? Colors.green : Colors.red)),
+                  FilledButton.icon(
+                      onPressed: next,
+                      icon: const Icon(Icons.arrow_forward),
+                      label:
+                          Text(i + 1 >= widget.words.length ? 'پایان' : 'بعدی'))
+                ])
             ])));
   }
 }
@@ -1092,7 +1147,11 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsState extends State<SettingsPage> {
   bool auto = true, online = false;
-  String time = '20:00';
+  String time = '20:00',
+      course = 'Starten Wir',
+      book = 'Starten Wir A1',
+      level = 'A1',
+      message = '';
   @override
   void initState() {
     super.initState();
@@ -1100,16 +1159,28 @@ class _SettingsState extends State<SettingsPage> {
   }
 
   Future<void> load() async {
-    auto = await AppSettings.autoPlay;
-    online = await AppSettings.onlineAudio;
-    time = await AppSettings.reminder;
-    if (mounted) setState(() {});
+    final p = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      auto = p.getBool('autoPlay') ?? true;
+      online = p.getBool('onlineAudio') ?? false;
+      time = p.getString('reminder') ?? '20:00';
+      course = p.getString('course') ?? 'Starten Wir';
+      book = p.getString('book') ?? 'Starten Wir A1';
+      level = p.getString('level') ?? 'A1';
+    });
   }
 
-  Future<void> setBool(String k, bool v) async {
+  Future<void> boolSet(String k, bool v) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(k, v);
-    setState(() {});
+    setState(() => message = 'ذخیره شد');
+  }
+
+  Future<void> textSet(String k, String v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(k, v);
+    setState(() => message = 'ذخیره شد');
   }
 
   Future<void> pick() async {
@@ -1120,35 +1191,119 @@ class _SettingsState extends State<SettingsPage> {
     if (t != null) {
       time =
           '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-      final p = await SharedPreferences.getInstance();
-      await p.setString('reminder', time);
-      setState(() {});
+      await textSet('reminder', time);
     }
   }
 
+  Future<void> backup() async {
+    final path = await FilePicker.platform.saveFile(
+        fileName: 'starten_wir_a1_backup.json',
+        type: FileType.custom,
+        allowedExtensions: ['json']);
+    if (path == null) return;
+    final rows = await VocabularyDb.instance.backupRows();
+    await File(path).writeAsString(jsonEncode({
+      'format': 'starten-wir-a1-progress-v1',
+      'createdAt': DateTime.now().toIso8601String(),
+      'course': course,
+      'book': book,
+      'level': level,
+      'words': rows
+    }));
+    setState(() => message = 'بکاپ ذخیره شد');
+  }
+
+  Future<void> restore() async {
+    final result = await FilePicker.platform
+        .pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+    if (result == null || result.files.single.path == null) return;
+    final data =
+        jsonDecode(await File(result.files.single.path!).readAsString());
+    await VocabularyDb.instance.restoreRows(data['words'] as List);
+    setState(() => message = 'بازیابی پیشرفت انجام شد');
+  }
+
   @override
-  Widget build(BuildContext c) => SafeArea(
-          child: ListView(children: [
-        const Header('تنظیمات'),
+  Widget build(BuildContext c) => Scaffold(
+      appBar: AppBar(title: const Text('تنظیمات')),
+      body: ListView(children: [
+        const Header('انتخاب دوره'),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: DropdownButtonFormField<String>(
+                value: course,
+                decoration: const InputDecoration(labelText: 'کورس'),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'Starten Wir', child: Text('Starten Wir'))
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    course = v;
+                    textSet('course', v);
+                  }
+                })),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: DropdownButtonFormField<String>(
+                value: book,
+                decoration: const InputDecoration(labelText: 'کتاب'),
+                items: const [
+                  DropdownMenuItem(
+                      value: 'Starten Wir A1', child: Text('Starten Wir A1'))
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    book = v;
+                    textSet('book', v);
+                  }
+                })),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: DropdownButtonFormField<String>(
+                value: level,
+                decoration: const InputDecoration(labelText: 'سطح'),
+                items: const [DropdownMenuItem(value: 'A1', child: Text('A1'))],
+                onChanged: (v) {
+                  if (v != null) {
+                    level = v;
+                    textSet('level', v);
+                  }
+                })),
+        const Divider(),
         SwitchListTile(
             title: const Text('پخش خودکار صدا در یادگیری'),
             value: auto,
-            onChanged: (v) => setBool('autoPlay', v)),
+            onChanged: (v) => boolSet('autoPlay', v)),
         SwitchListTile(
             title: const Text('استفاده از تلفظ آنلاین'),
-            subtitle: const Text(
-                'در صورت دسترسی به اینترنت؛ در غیر این صورت TTS آفلاین استفاده می‌شود'),
+            subtitle:
+                const Text('در صورت نبود اینترنت، تلفظ آفلاین استفاده می‌شود'),
             value: online,
-            onChanged: (v) => setBool('onlineAudio', v)),
+            onChanged: (v) => boolSet('onlineAudio', v)),
         ListTile(
             title: const Text('زمان یادآوری مرور'),
             subtitle: Text(time),
             trailing: const Icon(Icons.notifications_active),
             onTap: pick),
-        const Padding(
-            padding: EdgeInsets.all(20),
-            child: Text(
-                'تلفظ آنلاین معمولاً صدای طبیعی‌تری دارد، اما به اینترنت وابسته است؛ حالت آفلاین برای زمان بدون اینترنت باقی می‌ماند.',
-                style: TextStyle(color: Colors.grey)))
+        const Header('پیشرفت و بکاپ'),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: FilledButton.icon(
+                onPressed: backup,
+                icon: const Icon(Icons.file_download),
+                label: const Text('خروجی بکاپ پیشرفت'))),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: OutlinedButton.icon(
+                onPressed: restore,
+                icon: const Icon(Icons.file_upload),
+                label: const Text('ایمپورت بکاپ پیشرفت'))),
+        if (message.isNotEmpty)
+          Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(message,
+                  style: const TextStyle(
+                      color: Colors.green, fontWeight: FontWeight.bold)))
       ]));
 }
