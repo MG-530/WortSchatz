@@ -1,0 +1,177 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/header.dart';
+import '../services/database_service.dart';
+import '../services/settings_service.dart';
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
+  @override
+  State<SettingsPage> createState() => _SettingsState();
+}
+
+class _SettingsState extends State<SettingsPage> {
+  bool auto = true, online = false;
+  String time = '20:00',
+      course = 'Starten Wir',
+      book = 'Starten Wir A1',
+      level = 'A1',
+      message = '';
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    final p = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      auto = p.getBool('autoPlay') ?? true;
+      online = p.getBool('onlineAudio') ?? false;
+      time = p.getString('reminder') ?? '20:00';
+      course = p.getString('course') ?? 'Starten Wir';
+      book = p.getString('book') ?? 'Starten Wir A1';
+      level = p.getString('level') ?? 'A1';
+    });
+  }
+
+  Future<void> boolSet(String k, bool v) async {
+    await AppSettings.setBool(k, v);
+    setState(() => message = 'ذخیره شد');
+  }
+
+  Future<void> textSet(String k, String v) async {
+    await AppSettings.setString(k, v);
+    setState(() => message = 'ذخیره شد');
+  }
+
+  Future<void> pick() async {
+    final a = time.split(':');
+    final t = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay(hour: int.parse(a[0]), minute: int.parse(a[1])));
+    if (t != null) {
+      time =
+          '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+      await textSet('reminder', time);
+    }
+  }
+
+  Future<void> backup() async {
+    final path = await FilePicker.platform.saveFile(
+        fileName: 'starten_wir_a1_backup.json',
+        type: FileType.custom,
+        allowedExtensions: ['json']);
+    if (path == null) return;
+    final rows = await VocabularyDb.instance.backupRows();
+    await File(path).writeAsString(jsonEncode({
+      'format': 'starten-wir-a1-progress-v1',
+      'createdAt': DateTime.now().toIso8601String(),
+      'course': course,
+      'book': book,
+      'level': level,
+      'words': rows
+    }));
+    setState(() => message = 'بکاپ ذخیره شد');
+  }
+
+  Future<void> restore() async {
+    final result = await FilePicker.platform
+        .pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+    if (result == null || result.files.single.path == null) return;
+    final data =
+        jsonDecode(await File(result.files.single.path!).readAsString());
+    await VocabularyDb.instance.restoreRows(data['words'] as List);
+    setState(() => message = 'بازیابی پیشرفت انجام شد');
+  }
+
+  @override
+  Widget build(BuildContext c) => Scaffold(
+        appBar: AppBar(title: const Text('تنظیمات')),
+        body: ListView(children: [
+          const Header('انتخاب دوره'),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: DropdownButtonFormField<String>(
+                  value: course,
+                  decoration: const InputDecoration(labelText: 'کورس'),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'Starten Wir', child: Text('Starten Wir'))
+                  ],
+                  onChanged: (v) {
+                    if (v != null) {
+                      course = v;
+                      textSet('course', v);
+                    }
+                  })),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: DropdownButtonFormField<String>(
+                  value: book,
+                  decoration: const InputDecoration(labelText: 'کتاب'),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'Starten Wir A1', child: Text('Starten Wir A1'))
+                  ],
+                  onChanged: (v) {
+                    if (v != null) {
+                      book = v;
+                      textSet('book', v);
+                    }
+                  })),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: DropdownButtonFormField<String>(
+                  value: level,
+                  decoration: const InputDecoration(labelText: 'سطح'),
+                  items: const [DropdownMenuItem(value: 'A1', child: Text('A1'))],
+                  onChanged: (v) {
+                    if (v != null) {
+                      level = v;
+                      textSet('level', v);
+                    }
+                  })),
+          const Divider(),
+          SwitchListTile(
+              title: const Text('پخش خودکار صدا در یادگیری'),
+              value: auto,
+              onChanged: (v) => boolSet('autoPlay', v)),
+          SwitchListTile(
+              title: const Text('استفاده از تلفظ آنلاین'),
+              subtitle:
+                  const Text('در صورت نبود اینترنت، تلفظ آفلاین استفاده می‌شود'),
+              value: online,
+              onChanged: (v) => boolSet('onlineAudio', v)),
+          ListTile(
+              title: const Text('زمان یادآوری مرور'),
+              subtitle: Text(time),
+              trailing: const Icon(Icons.notifications_active),
+              onTap: pick),
+          const Header('پیشرفت و بکاپ'),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: FilledButton.icon(
+                  onPressed: backup,
+                  icon: const Icon(Icons.file_download),
+                  label: const Text('خروجی بکاپ پیشرفت'))),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: OutlinedButton.icon(
+                  onPressed: restore,
+                  icon: const Icon(Icons.file_upload),
+                  label: const Text('ایمپورت بکاپ پیشرفت'))),
+          if (message.isNotEmpty)
+            Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(message,
+                    style: const TextStyle(
+                        color: Colors.green, fontWeight: FontWeight.bold)))
+        ]),
+      );
+}
