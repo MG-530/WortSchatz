@@ -20,7 +20,8 @@ class VocabularyDb {
             await _db!.rawQuery('SELECT COUNT(*) FROM words')) ??
         0;
     if (count == 0) {
-      final raw = jsonDecode(await rootBundle.loadString('assets/vocab.json')) as List;
+      final raw =
+          jsonDecode(await rootBundle.loadString('assets/vocab.json')) as List;
       final batch = _db!.batch();
       for (var i = 0; i < raw.length; i++) {
         final x = Map<String, dynamic>.from(raw[i]);
@@ -42,16 +43,53 @@ class VocabularyDb {
     }
   }
 
-  Future<List<Word>> all({String query = '', int? lesson}) async {
+  Future<void> init_merged() async {
+    final dbPath = pth.join(await getDatabasesPath(), 'starten_wir_a1.db');
+    _db = await openDatabase(dbPath, version: 1, onCreate: (db, v) async {
+      await db.execute(
+          'CREATE TABLE words(id INTEGER PRIMARY KEY, german TEXT, display TEXT, article TEXT, persian TEXT, english TEXT, pronunciation TEXT, word_type TEXT, gender TEXT, lessons TEXT, box INTEGER DEFAULT 0, next_review TEXT)');
+    });
+    final count = Sqflite.firstIntValue(
+            await _db!.rawQuery('SELECT COUNT(*) FROM words')) ??
+        0;
+    if (count == 0) {
+      final raw =
+          jsonDecode(await rootBundle.loadString('assets/vocab_merged.json')) as List;
+      final batch = _db!.batch();
+      for (var i = 0; i < raw.length; i++) {
+        final x = Map<String, dynamic>.from(raw[i]);
+        batch.insert('words', {
+          'id': i + 1,
+          'german': x['german'] ?? '',
+          'display': x['display'] ?? '',
+          'article': x['article'] ?? '',
+          'persian': x['persian'] ?? '',
+          'english': x['english'] ?? '',
+          'pronunciation': x['pronunciation'] ?? '',
+          'word_type': x['word_type'] ?? 'other',
+          'gender': x['gender'] ?? '',
+          'lessons': (x['lessons'] as List? ?? []).join(','),
+          'box': 0
+        });
+      }
+      await batch.commit(noResult: true);
+    }
+  }
+
+  Future<List<Word>> all({String query = '', int? level, int? lesson}) async {
     var where = <String>[];
     var args = <Object?>[];
     if (query.trim().isNotEmpty) {
       where.add('(german LIKE ? OR persian LIKE ? OR english LIKE ?)');
       args += ['%$query%', '%$query%', '%$query%'];
     }
+    if (level != null) {
+      where.add('level LIKE ?');
+      args.add(['%', '$level', '%']);
+    }
     if (lesson != null) {
       where.add('lessons LIKE ?');
-      args.add('%$lesson%');
+      args.add(['%', '$lesson', '%']);
     }
     final rows = await _db!.query('words',
         where: where.isEmpty ? null : where.join(' AND '),

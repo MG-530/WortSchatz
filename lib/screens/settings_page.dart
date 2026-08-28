@@ -130,7 +130,10 @@ class _SettingsState extends State<SettingsPage> {
               child: DropdownButtonFormField<String>(
                   value: level,
                   decoration: const InputDecoration(labelText: 'سطح'),
-                  items: const [DropdownMenuItem(value: 'A1', child: Text('A1'))],
+                  items: const [
+                    DropdownMenuItem(value: 'A1', child: Text('A1')),
+                    DropdownMenuItem(value: 'A2', child: Text('A2'))
+                  ],
                   onChanged: (v) {
                     if (v != null) {
                       level = v;
