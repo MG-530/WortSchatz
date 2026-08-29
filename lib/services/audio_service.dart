@@ -12,7 +12,11 @@ Future<void> playWord(Word w, {bool online = false}) async {
     } catch (_) {}
   }
   final t = FlutterTts();
-  await t.setLanguage('de-DE');
+  try {
+    await t.setLanguage('de-DE');
+  } catch (_) {
+    // Language setting not supported on this platform, proceed anyway
+  }
   await t.setSpeechRate(.42);
   await t.speak(w.german);
 }
