@@ -1,6 +1,6 @@
 class Word {
   final int id;
-  final String german, display, article, persian, english, pronunciation, type, gender;
+  final String german, display, article, persian, english, pronunciation, type, gender, level;
   final List<int> lessons;
   final int box;
   final DateTime? nextReview;
@@ -15,6 +15,7 @@ class Word {
     required this.pronunciation,
     required this.type,
     required this.gender,
+    required this.level,
     required this.lessons,
     required this.box,
     this.nextReview,
@@ -30,6 +31,7 @@ class Word {
         pronunciation: m['pronunciation'] ?? '',
         type: m['word_type'] ?? 'other',
         gender: m['gender'] ?? '',
+        level: m['level'] ?? 'A1',
         lessons: (m['lessons'] as String? ?? '')
             .split(',')
             .where((e) => e.isNotEmpty)
@@ -41,6 +43,15 @@ class Word {
             : DateTime.tryParse(m['next_review']),
       );
 
+  /// Lesson code like A11 (= lesson 1 of A1), A21 (= lesson 1 of A2).
+  /// A2 lessons are stored as 101..112, displayed as 1..12.
+  static String lessonCode(String level, int stored) {
+    final d = stored > 100 ? stored - 100 : stored;
+    return '$level$d';
+  }
+
+  String codeFor(int stored) => lessonCode(level, stored);
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'german': german,
@@ -51,6 +62,7 @@ class Word {
         'pronunciation': pronunciation,
         'word_type': type,
         'gender': gender,
+        'level': level,
         'lessons': lessons.join(','),
         'box': box,
         'next_review': nextReview?.toIso8601String(),
