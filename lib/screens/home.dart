@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/streak_chart.dart';
+import '../services/streak_service.dart';
 import '../widgets/header.dart';
 import '../widgets/stat_card.dart';
 import '../services/database_service.dart';
@@ -72,6 +73,9 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   Map<String, int> s = {};
   List<Word> w = [];
+  int currentStreak = 0;
+  int longestStreak = 0;
+  List<int> streakDays = [];
 
   @override
   void initState() {
@@ -82,6 +86,10 @@ class _DashboardState extends State<Dashboard> {
   Future<void> load() async {
     w = await VocabularyDb.instance.all();
     final x = await VocabularyDb.instance.stats();
+    final sd = await StreakService.getStreak();
+    streakDays = await StreakService.getLast7Days();
+    currentStreak = sd.currentStreak;
+    longestStreak = sd.longestStreak;
     if (mounted) setState(() => s = x);
   }
 
@@ -94,65 +102,72 @@ class _DashboardState extends State<Dashboard> {
           child: ListView(children: [
             Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Starten Wir A1',
-                      style: Theme.of(c)
-                          .textTheme
-                          .headlineMedium
-                          ?.copyWith(fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 8),
-                  Text('یادگیری آلمانی با مرور هوشمند',
-                      style: const TextStyle(color: Colors.grey)),
-                ])),
-            Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Card(
-                    color: const Color(0xfff0ecff),
-                    child: const Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Text(
-                            'یک درس انتخاب کن، واژه‌ها را یاد بگیر و با تمرین و لایتنر تثبیت کن.',
-                            style: TextStyle(fontSize: 17))))),
-            Padding(
-                padding: const EdgeInsets.all(20),
-                child: GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      StatCard('کل واژه‌ها', '${s['total'] ?? 0}',
-                          Icons.library_books),
-                      StatCard('یادگرفته‌شده', '${s['learned'] ?? 0}',
-                          Icons.check_circle),
-                      StatCard('جدید', '${s['fresh'] ?? 0}', Icons.fiber_new),
-                      StatCard('آماده مرور', '${s['due'] ?? 0}', Icons.today)
+                      Text('Starten Wir A1',
+                          style: Theme.of(c)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 8),
+                      Text('یادگیری آلمانی با مرور هوشمند',
+                          style: const TextStyle(color: Colors.grey)),
                     ])),
-            const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Text('نمایششماتیک جعبوهای لایتنر',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-            SizedBox(
-                height: 120,
-                child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      for (int i = 0; i <= 5; i++)
-                        Container(
-                            width: 116,
-                            margin: const EdgeInsets.only(left: 8),
-                            child: Card(
-                                child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                  Text('باکس $i',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  Text('${b(i)} واژه'),
-                                  Text(i == 0 ? 'جدید' : 'مرور')
-                                ])))
-                    ]))
+              StreakChart(
+                  currentStreak: currentStreak,
+                  longestStreak: longestStreak,
+                  days: streakDays),
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Card(
+                      color: const Color(0xfff0ecff),
+                      child: const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text(
+                              'یک درس انتخاب کن، واژه‌ها را یاد بگیر و با تمرین و لایتنر تثبیت کن.',
+                              style: TextStyle(fontSize: 17))))),
+              Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      children: [
+                        StatCard('کل واژه‌ها', '${s['total'] ?? 0}',
+                            Icons.library_books),
+                        StatCard('یادگرفته‌شده', '${s['learned'] ?? 0}',
+                            Icons.check_circle),
+                        StatCard('جدید', '${s['fresh'] ?? 0}', Icons.fiber_new),
+                        StatCard('آماده مرور', '${s['due'] ?? 0}', Icons.today)
+                      ])),
+              const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text('نمایششماتیک جعبه‌های لایتنر',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+              SizedBox(
+                  height: 120,
+                  child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        for (int i = 0; i <= 5; i++)
+                          Container(
+                              width: 116,
+                              margin: const EdgeInsets.only(left: 8),
+                              child: Card(
+                                  child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                    Text('باکس $i',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Text('${b(i)} واژه'),
+                                    Text(i == 0 ? 'جدید' : 'مرور')
+                                  ])))
+                      ]))
           ])));
 }
