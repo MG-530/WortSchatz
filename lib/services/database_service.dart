@@ -81,8 +81,8 @@ class VocabularyDb {
       args += ['%$query%', '%$query%', '%$query%'];
     }
     if (level != null) {
-      where.add('level LIKE ?');
-      args.add('%$level%');
+      where.add('level = ?');
+      args.add(level);
     }
     if (lesson != null) {
       where.add('lessons LIKE ?');
@@ -146,8 +146,8 @@ class VocabularyDb {
   Batch batch() => _db!.batch();
 
   Future<Map<String, int>> stats({String? level}) async {
-    final where = level == null ? '' : 'WHERE level LIKE ?';
-    final args = level == null ? <Object?>[] : ['%$level%'];
+    final where = level == null ? '' : 'WHERE level = ?';
+    final args = level == null ? <Object?>[] : [level];
     final r = await _db!.rawQuery(
         'SELECT COUNT(*) total, SUM(CASE WHEN box > 0 THEN 1 ELSE 0 END) learned, SUM(CASE WHEN box = 0 THEN 1 ELSE 0 END) fresh FROM words $where',
         args);
