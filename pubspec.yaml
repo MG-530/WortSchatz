@@ -32,3 +32,5 @@ flutter:
     - assets/vocab.json
     - assets/vocab2.json
     - assets/vocab_merged.json
+    - assets/starten_wir_a1_cover.jpg
+    - assets/starten_wir_a2_cover.jpg
