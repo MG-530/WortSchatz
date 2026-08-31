@@ -43,11 +43,12 @@ class Word {
             : DateTime.tryParse(m['next_review']),
       );
 
-  /// Lesson code like A11 (= lesson 1 of A1), A21 (= lesson 1 of A2).
+  /// Display-only lesson code like A1-1 (= lesson 1 of A1),
+  /// A2-1 (= lesson 1 of A2). Storage is untouched:
   /// A2 lessons are stored as 101..112, displayed as 1..12.
   static String lessonCode(String level, int stored) {
     final d = stored > 100 ? stored - 100 : stored;
-    return '$level$d';
+    return '$level-$d';
   }
 
   String codeFor(int stored) => lessonCode(level, stored);
