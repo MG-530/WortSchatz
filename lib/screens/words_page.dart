@@ -4,6 +4,7 @@ import '../widgets/header.dart';
 import '../services/database_service.dart';
 import '../models/word.dart';
 import '../helpers/colors.dart';
+import '../helpers/labels.dart';
 import '../services/audio_service.dart';
 
 class WordsPage extends StatefulWidget {
@@ -126,7 +127,7 @@ class _WordsState extends State<WordsPage> {
                             subtitle: Row(
                               children: [
                                 const SizedBox(width: 4),
-                                Text('درس ${x.codeFor(_getLesson(x))} | ${x.level} | ${_typeLabel(x)}',
+                                Text('درس ${x.codeFor(x.lessons.isEmpty ? 0 : x.lessons.reduce((a, b) => a < b ? a : b))} | ${x.level} | ${typeLabel(x)}',
                                     style: const TextStyle(
                                         fontSize: 12, color: Colors.grey)),
                                 const Spacer(),
@@ -142,17 +143,3 @@ class _WordsState extends State<WordsPage> {
         ])));
   }
 
-String _typeLabel(Word w) {
-  switch (w.type) {
-    case 'verb': return 'فعل';
-    case 'noun': return 'اسم';
-    case 'adjective': return 'صفت';
-    case 'phrase': return 'عبارت';
-    default: return 'سایر';
-  }
-}
-
-int _getLesson(Word word) {
-  if (word.lessons.isEmpty) return 0;
-  return word.lessons.reduce((value, element) => value < element ? value : element);
-}
