@@ -139,6 +139,8 @@ class VocabularyDb {
     await batch.commit(noResult: true);
   }
 
+  Batch batch() => _db!.batch();
+
   Future<Map<String, int>> stats({String? level}) async {
     final where = level == null ? '' : 'WHERE level LIKE ?';
     final args = level == null ? <Object?>[] : ['%$level%'];

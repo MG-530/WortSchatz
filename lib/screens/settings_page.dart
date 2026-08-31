@@ -16,8 +16,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsState extends State<SettingsPage> {
   bool auto = true, online = false;
   String time = '20:00',
-      course = 'Starten Wir',
-      book = 'Starten Wir A1',
       level = 'A1',
       message = '';
 
@@ -34,8 +32,6 @@ class _SettingsState extends State<SettingsPage> {
       auto = p.getBool('autoPlay') ?? true;
       online = p.getBool('onlineAudio') ?? false;
       time = p.getString('reminder') ?? '20:00';
-      course = p.getString('course') ?? 'Starten Wir';
-      book = p.getString('book') ?? 'Starten Wir A1';
       level = p.getString('level') ?? 'A1';
     });
   }
@@ -73,8 +69,6 @@ class _SettingsState extends State<SettingsPage> {
       await File(path).writeAsString(jsonEncode({
         'format': 'starten-wir-a1-progress-v1',
         'createdAt': DateTime.now().toIso8601String(),
-        'course': course,
-        'book': book,
         'level': level,
         'words': rows
       }));
@@ -102,37 +96,7 @@ class _SettingsState extends State<SettingsPage> {
   Widget build(BuildContext c) => Scaffold(
         appBar: AppBar(title: const Text('تنظیمات')),
         body: ListView(children: [
-          const Header('انتخاب دوره'),
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: DropdownButtonFormField<String>(
-                  value: course,
-                  decoration: const InputDecoration(labelText: 'کورس'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'Starten Wir', child: Text('Starten Wir'))
-                  ],
-                  onChanged: (v) {
-                    if (v != null) {
-                      course = v;
-                      textSet('course', v);
-                    }
-                  })),
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: DropdownButtonFormField<String>(
-                  value: book,
-                  decoration: const InputDecoration(labelText: 'کتاب'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'Starten Wir A1', child: Text('Starten Wir A1'))
-                  ],
-                  onChanged: (v) {
-                    if (v != null) {
-                      book = v;
-                      textSet('book', v);
-                    }
-                  })),
+          const Header('انتخاب سطح'),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: DropdownButtonFormField<String>(

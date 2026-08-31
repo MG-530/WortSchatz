@@ -19,19 +19,10 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   int tab = 0;
   final pages = const [Dashboard(), LessonsPage(), ReviewPage(), WordsPage()];
-  String level = 'A1';
 
   @override
   void initState() {
     super.initState();
-    load();
-  }
-
-  Future<void> load() async {
-    final p = await SharedPreferences.getInstance();
-    setState(() {
-      level = p.getString('level') ?? 'A1';
-    });
   }
 
   @override
@@ -81,7 +72,6 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   Map<String, int> s = {};
   List<Word> w = [];
-  String level = 'A1';
 
   @override
   void initState() {
@@ -90,12 +80,8 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> load() async {
-    final p = await SharedPreferences.getInstance();
-    setState(() {
-      level = p.getString('level') ?? 'A1';
-    });
-    w = await VocabularyDb.instance.all(level: level);
-    final x = await VocabularyDb.instance.stats(level: level);
+    w = await VocabularyDb.instance.all();
+    final x = await VocabularyDb.instance.stats();
     if (mounted) setState(() => s = x);
   }
 

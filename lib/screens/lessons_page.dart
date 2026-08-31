@@ -40,10 +40,35 @@ class _LessonsState extends State<LessonsPage> {
 
   int count(int l) => w.where((x) => x.lessons.contains(l)).length;
 
-  void addScope(String title) =>
+  Future<void> addScope(String title, {int? lesson, String? levelFilter}) async {
+    // Load fresh data to ensure we have the latest box status
+    final freshWords = await VocabularyDb.instance.all(level: levelFilter ?? level);
+    
+    final wordsToAdd = freshWords.where((x) {
+      if (lesson != null && !x.lessons.contains(lesson)) return false;
+      if (levelFilter != null && x.level != levelFilter) return false;
+      return x.box == 0;
+    }).toList();
+
+    if (wordsToAdd.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('همه واژه‌ها قبلاً در لایتنر هستند')));
+      return;
+    }
+
+    final batch = VocabularyDb.instance.batch();
+    for (final word in wordsToAdd) {
+      batch.update('words', {'box': 1, 'next_review': DateTime.now().toIso8601String()},
+          where: 'id = ?', whereArgs: [word.id]);
+    }
+    await batch.commit(noResult: true);
+
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(
-              '$title به لایتنر اضافه شد؛ واژه‌های جدید آماده مرور هستند')));
+          content: Text('${wordsToAdd.length} واژه از $title به لایتنر اضافه شد')));
+      load();
+    }
+  }
 
   List<int> get lessonNumbers {
     final set = <int>{};
@@ -126,7 +151,7 @@ class _LessonsState extends State<LessonsPage> {
                   IconButton(
                       tooltip: 'افزودن به لایتنر',
                       icon: const Icon(Icons.add_task),
-                      onPressed: () => addScope('درس $code')),
+                      onPressed: () => addScope('درس $code', lesson: l, levelFilter: level)),
                   CircleAvatar(child: Text(code, style: const TextStyle(fontSize: 12)))
                 ]),
                 onTap: () => Navigator.push(
@@ -151,7 +176,7 @@ class _LessonsState extends State<LessonsPage> {
           child: FilledButton.icon(
               onPressed: w.isEmpty
                   ? null
-                  : () => addScope('کل کتاب Starten Wir $level'),
+                  : () => addScope('کل کتاب Starten Wir $level', levelFilter: level),
               icon: const Icon(Icons.add_task),
               label: Text('افزودن کل کتاب به لایتنر ($level)'))),
       const Header('درس‌ها',
