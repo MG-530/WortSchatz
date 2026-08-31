@@ -4,7 +4,9 @@ import '../models/word.dart';
 import '../helpers/colors.dart';
 import '../helpers/labels.dart';
 import '../services/audio_service.dart';
+import '../services/database_service.dart';
 import '../services/settings_service.dart';
+import '../services/streak_service.dart';
 
 class LearnSession extends StatefulWidget {
   final List<Word> words;
@@ -39,6 +41,11 @@ class _LearnState extends State<LearnSession> {
       revealed = false;
     });
     if (auto) playWord(widget.words[index], online: online);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -106,9 +113,19 @@ class _LearnState extends State<LearnSession> {
                     onPressed: () => playWord(w, online: online),
                     icon: const Icon(Icons.volume_up)),
                 FilledButton.icon(
-                    onPressed: () => move(1),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('بعدی'))
+                    onPressed: () {
+                      VocabularyDb.instance.grade(w, true);
+                      move(1);
+                    },
+                    icon: const Icon(Icons.check),
+                    label: const Text('بلد')),
+                FilledButton.icon(
+                    onPressed: () {
+                      VocabularyDb.instance.grade(w, false);
+                      move(1);
+                    },
+                    icon: const Icon(Icons.close),
+                    label: const Text('بلد نبودم'))
               ])
             ])));
   }

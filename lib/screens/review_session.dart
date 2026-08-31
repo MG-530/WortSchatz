@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/word.dart';
 import '../helpers/colors.dart';
 import '../services/database_service.dart';
+import '../services/streak_service.dart';
 
 class ReviewSession extends StatefulWidget {
   final List<Word> words;
@@ -20,7 +21,12 @@ class ReviewSession extends StatefulWidget {
 class _ReviewSessionState extends State<ReviewSession> {
   int i = 0;
   bool show = false;
-  bool? lastCardGrade;
+
+  @override
+  void initState() {
+    super.initState();
+    show = false;
+  }
 
   @override
   Widget build(BuildContext c) {
@@ -36,6 +42,7 @@ class _ReviewSessionState extends State<ReviewSession> {
               Text('کارت ${i + 1} از ${widget.words.length}'),
               Expanded(
                   child: GestureDetector(
+                      onTap: () => setState(() => show = !show),
                       onHorizontalDragEnd: (d) {
                         if (d.primaryVelocity != null)
                           setState(() => i = (i +
@@ -71,35 +78,34 @@ class _ReviewSessionState extends State<ReviewSession> {
                 FilledButton(
                     onPressed: () => _handleAnswer(false),
                     child: const Text('بلد نبودم')),
-              FilledButton(
-                  onPressed: () => _handleAnswer(true),
-                  child: const Text('بلد بودم'))
+                  FilledButton(
+                      onPressed: () => _handleAnswer(true),
+                      child: const Text('بلد بودم'))
             ])));
   }
 
   void _handleAnswer(bool known) {
+    VocabularyDb.instance.grade(widget.words[i], known);
     if (widget.words.length > 1 || i + 1 < widget.words.length) {
-      // Not at last card - just go to next
       setState(() {
         i++;
       });
     } else {
-      // At last card - store grade and show dialog
       _showEndOfReviewDialog(known);
     }
   }
 
   Future<void> _showEndOfReviewDialog(bool known) async {
+    await StreakService.recordStudySession();
     if (widget.extra.isNotEmpty && mounted) {
       final go = await showDialog<bool>(
           context: context,
           builder: (d) => AlertDialog(
                   title: const Text('مرور آمده تمام شد'),
                   content: const Text(
-                      'واژه‌های آماده‌نشده را هم مرور می‌کنی؟ در این حالت باکس‌ها تغییر نمیRender.')),
+                      'واژه‌های آماده‌نشده را هم مرور می‌کنی؟ در این حالت باکس‌ها تغییر نمی‌شود.')),
           );
       if (go == true && mounted) {
-        // Navigate to extra words review
         Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -109,11 +115,5 @@ class _ReviewSessionState extends State<ReviewSession> {
                     extra: const [])));
       } else if (mounted) Navigator.pop(context);
     } else if (mounted) Navigator.pop(context);
-  }
-
-  @override
-  void dispose() {
-    lastCardGrade = null;
-    super.dispose();
   }
 }
