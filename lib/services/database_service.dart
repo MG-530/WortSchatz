@@ -73,7 +73,7 @@ class VocabularyDb {
 
   Future<void> init_merged() => init();
 
-  Future<List<Word>> all({String query = '', String? level, int? lesson}) async {
+  Future<List<Word>> all({String query = '', String? level, int? lesson, String? wordType}) async {
     var where = <String>[];
     var args = <Object?>[];
     if (query.trim().isNotEmpty) {
@@ -87,6 +87,10 @@ class VocabularyDb {
     if (lesson != null) {
       where.add('lessons LIKE ?');
       args.add('%$lesson%');
+    }
+    if (wordType != null) {
+      where.add('word_type = ?');
+      args.add(wordType);
     }
     final rows = await _db!.query('words',
         where: where.isEmpty ? null : where.join(' AND '),

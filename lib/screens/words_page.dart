@@ -15,7 +15,11 @@ class WordsPage extends StatefulWidget {
 class _WordsState extends State<WordsPage> {
   List<Word> w = [];
   String q = '';
-  String level = 'A1';
+  String level = 'all';
+  int lesson = 0;
+  String wordType = 'all';
+
+  static const List<String> wordTypes = ['all', 'noun', 'verb', 'adjective', 'phrase', 'other'];
 
   @override
   void initState() {
@@ -24,7 +28,12 @@ class _WordsState extends State<WordsPage> {
   }
 
   Future<void> load() async {
-    w = await VocabularyDb.instance.all(level: level, query: q);
+    w = await VocabularyDb.instance.all(
+      level: level == 'all' ? null : level,
+      lesson: lesson == 0 ? null : lesson,
+      wordType: wordType == 'all' ? null : wordType,
+      query: q,
+    );
     if (mounted) setState(() {});
   }
 
@@ -33,7 +42,7 @@ class _WordsState extends State<WordsPage> {
       child: Directionality(
         textDirection: ui.TextDirection.rtl,
         child: Column(children: [
-          const Header('واژه‌ها', subtitle: 'Search all book words'),
+          const Header('واژه‌ها', subtitle: 'جستجو و فیلتر واژگان'),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
@@ -46,6 +55,61 @@ class _WordsState extends State<WordsPage> {
                     q = v;
                     load();
                   })),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Wrap(spacing: 8, runSpacing: 8, children: [
+                DropdownButtonFormField<String>(
+                  value: level,
+                  decoration: const InputDecoration(
+                    labelText: 'سطح',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  isDense: true,
+                  items: const [
+                    DropdownMenuItem(value: 'all', child: Text('همه')),
+                    DropdownMenuItem(value: 'A1', child: Text('A1')),
+                    DropdownMenuItem(value: 'A2', child: Text('A2')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) { level = v; load(); }
+                  },
+                ),
+                DropdownButtonFormField<int>(
+                  value: lesson,
+                  decoration: const InputDecoration(
+                    labelText: 'درس',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  isDense: true,
+                  items: [
+                    const DropdownMenuItem(value: 0, child: Text('همه')),
+                    for (int i = 1; i <= 12; i++)
+                      DropdownMenuItem(value: i, child: Text('درس $i')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) { lesson = v; load(); }
+                  },
+                ),
+                DropdownButtonFormField<String>(
+                  value: wordType,
+                  decoration: const InputDecoration(
+                    labelText: 'نوع',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  isDense: true,
+                  items: wordTypes
+                      .map((t) => DropdownMenuItem(
+                          value: t,
+                          child: Text(t == 'all' ? 'همه' : t)))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) { wordType = v; load(); }
+                  },
+                ),
+              ])),
           Expanded(
               child: ListView.builder(
                   itemCount: w.length,
@@ -62,7 +126,7 @@ class _WordsState extends State<WordsPage> {
                             subtitle: Row(
                               children: [
                                 const SizedBox(width: 4),
-                                Text('درس ${x.codeFor(_getLesson(x))}',
+                                Text('درس ${x.codeFor(_getLesson(x))} | ${x.level} | ${_typeLabel(x)}',
                                     style: const TextStyle(
                                         fontSize: 12, color: Colors.grey)),
                                 const Spacer(),
@@ -76,11 +140,19 @@ class _WordsState extends State<WordsPage> {
                                 onPressed: () => playWord(x))));
                   })),
         ])));
+  }
+
+String _typeLabel(Word w) {
+  switch (w.type) {
+    case 'verb': return 'فعل';
+    case 'noun': return 'اسم';
+    case 'adjective': return 'صفت';
+    case 'phrase': return 'عبارت';
+    default: return 'سایر';
+  }
 }
 
 int _getLesson(Word word) {
-  // Find the lowest lesson number from the word's lessons list
   if (word.lessons.isEmpty) return 0;
   return word.lessons.reduce((value, element) => value < element ? value : element);
 }
-
