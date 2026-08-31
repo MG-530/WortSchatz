@@ -27,7 +27,7 @@ class _PracticeState extends State<PracticePage> {
   }
 
   Future<void> load() async {
-    words = await VocabularyDb.instance.all();
+    words = await VocabularyDb.instance.all(level: level);
     words.shuffle();
     if (mounted) setState(() {});
   }

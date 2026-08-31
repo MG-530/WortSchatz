@@ -15,6 +15,7 @@ class WordsPage extends StatefulWidget {
 class _WordsState extends State<WordsPage> {
   List<Word> w = [];
   String q = '';
+  String level = 'A1';
 
   @override
   void initState() {
@@ -23,7 +24,7 @@ class _WordsState extends State<WordsPage> {
   }
 
   Future<void> load() async {
-    w = await VocabularyDb.instance.all(query: q);
+    w = await VocabularyDb.instance.all(level: level, query: q);
     if (mounted) setState(() {});
   }
 
@@ -61,7 +62,7 @@ class _WordsState extends State<WordsPage> {
                             subtitle: Row(
                               children: [
                                 const SizedBox(width: 4),
-                                Text('Lesson ${_getLesson(x)}',
+                                Text('درس ${x.codeFor(_getLesson(x))}',
                                     style: const TextStyle(
                                         fontSize: 12, color: Colors.grey)),
                                 const Spacer(),
@@ -82,3 +83,4 @@ int _getLesson(Word word) {
   if (word.lessons.isEmpty) return 0;
   return word.lessons.reduce((value, element) => value < element ? value : element);
 }
+

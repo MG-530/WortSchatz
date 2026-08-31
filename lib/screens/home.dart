@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/header.dart';
 import '../widgets/stat_card.dart';
 import '../services/database_service.dart';
@@ -18,6 +19,20 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   int tab = 0;
   final pages = const [Dashboard(), LessonsPage(), ReviewPage(), WordsPage()];
+  String level = 'A1';
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    final p = await SharedPreferences.getInstance();
+    setState(() {
+      level = p.getString('level') ?? 'A1';
+    });
+  }
 
   @override
   Widget build(BuildContext c) => Directionality(
@@ -66,6 +81,7 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   Map<String, int> s = {};
   List<Word> w = [];
+  String level = 'A1';
 
   @override
   void initState() {
@@ -74,8 +90,12 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> load() async {
-    w = await VocabularyDb.instance.all();
-    final x = await VocabularyDb.instance.stats();
+    final p = await SharedPreferences.getInstance();
+    setState(() {
+      level = p.getString('level') ?? 'A1';
+    });
+    w = await VocabularyDb.instance.all(level: level);
+    final x = await VocabularyDb.instance.stats(level: level);
     if (mounted) setState(() => s = x);
   }
 

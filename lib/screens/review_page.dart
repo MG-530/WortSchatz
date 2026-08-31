@@ -13,6 +13,7 @@ class ReviewPage extends StatefulWidget {
 
 class _ReviewState extends State<ReviewPage> {
   List<Word> all = [];
+  String level = 'A1';
 
   @override
   void initState() {
@@ -21,7 +22,7 @@ class _ReviewState extends State<ReviewPage> {
   }
 
   Future<void> load() async {
-    all = await VocabularyDb.instance.all();
+    all = await VocabularyDb.instance.all(level: level);
     if (mounted) setState(() {});
   }
 
