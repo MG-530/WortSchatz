@@ -86,7 +86,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
   Widget build(BuildContext c) {
     if (widget.words.isEmpty)
       return const Scaffold(
-          body: Center(child: Text('واژهٔ آماده‌ای برای مرور نیست')));
+          body: Center(child: Text('واژه ای اماده برای مرور نیست')));
     return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
         body: Padding(

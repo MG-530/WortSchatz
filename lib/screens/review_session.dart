@@ -32,7 +32,7 @@ class _ReviewSessionState extends State<ReviewSession> {
   Widget build(BuildContext c) {
     if (widget.words.isEmpty)
       return const Scaffold(
-          body: Center(child: Text('واژهٔ آمدهی برای مرور نیست')));
+          body: Center(child: Text('واژه ای اماده برای مرور نیست')));
     final w = widget.words[i];
     return Scaffold(
         appBar: AppBar(title: Text(widget.title)),

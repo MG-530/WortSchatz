@@ -30,44 +30,51 @@ class VocabularyDb {
     final count = Sqflite.firstIntValue(
             await _db!.rawQuery('SELECT COUNT(*) FROM words')) ??
         0;
-    if (count != raw.length) {
-      final progress = <String, Map<String, Object?>>{};
-      try {
-        final rows = await _db!
-            .query('words', columns: ['german', 'box', 'next_review']);
-        for (final r in rows) {
-          final g = r['german'] as String?;
-          if (g != null && g.isNotEmpty) {
-            progress[g] = {
-              'box': r['box'] ?? 0,
-              'next_review': r['next_review']
-            };
+    final fresh = count != raw.length;
+    if (fresh) {
+      await _db!.execute('DROP TABLE IF EXISTS words');
+      await _db!.execute(
+          'CREATE TABLE words(id INTEGER PRIMARY KEY, german TEXT, display TEXT, article TEXT, persian TEXT, english TEXT, pronunciation TEXT, word_type TEXT, gender TEXT, level TEXT, lessons TEXT, box INTEGER DEFAULT 0, next_review TEXT)');
+    }
+    final words = <Map<String, dynamic>>[];
+    for (final x in raw) {
+      words.add({
+        'id': words.length + 1,
+        'german': x['german'] ?? '',
+        'display': x['display'] ?? '',
+        'article': x['article'] ?? '',
+        'persian': x['persian'] ?? '',
+        'english': x['english'] ?? '',
+        'pronunciation': x['pronunciation'] ?? '',
+        'word_type': x['word_type'] ?? 'other',
+        'gender': x['gender'] ?? '',
+        'level': x['level'] ?? 'A1',
+        'lessons': (x['lessons'] as List? ?? []).join(','),
+        'box': 0,
+        'next_review': null,
+      });
+    }
+    try {
+      if (fresh) {
+        for (var chunkStart = 0; chunkStart < words.length; chunkStart += 500) {
+          final chunkEnd = (chunkStart + 500 < words.length) ? chunkStart + 500 : words.length;
+          for (var i = chunkStart; i < chunkEnd; i++) {
+            await _db!.insert('words', words[i]);
           }
         }
-      } catch (_) {}
-      await _db!.delete('words');
-      final batch = _db!.batch();
-      for (var i = 0; i < raw.length; i++) {
-        final x = Map<String, dynamic>.from(raw[i]);
-        final g = x['german'] ?? '';
-        final p = progress[g];
-        batch.insert('words', {
-          'id': i + 1,
-          'german': g,
-          'display': x['display'] ?? '',
-          'article': x['article'] ?? '',
-          'persian': x['persian'] ?? '',
-          'english': x['english'] ?? '',
-          'pronunciation': x['pronunciation'] ?? '',
-          'word_type': x['word_type'] ?? 'other',
-          'gender': x['gender'] ?? '',
-          'level': x['level'] ?? 'A1',
-          'lessons': (x['lessons'] as List? ?? []).join(','),
-          'box': p?['box'] ?? 0,
-          'next_review': p?['next_review']
-        });
+      } else {
+        for (var i = 0; i < words.length; i++) {
+          await _db!.update('words',
+              {'level': words[i]['level'], 'box': 0, 'next_review': null},
+              where: 'id = ?', whereArgs: [words[i]['id']]);
+        }
       }
-      await batch.commit(noResult: true);
+    } catch (_) {
+      await _db!.rawUpdate('UPDATE words SET box = 0, next_review = NULL');
+      for (var i = 0; i < words.length; i++) {
+        await _db!.update('words', {'level': words[i]['level']},
+            where: 'id = ?', whereArgs: [words[i]['id']]);
+      }
     }
   }
 
