@@ -14,7 +14,7 @@ class StreakChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
-    final maxBar = days.reduce((a, b) => a > b ? a : b);
+    final maxBar = days.isEmpty ? 0 : days.reduce((a, b) => a > b ? a : b);
     return Card(
       color: const Color(0xfff0ecff),
       child: Padding(
@@ -30,7 +30,7 @@ class StreakChart extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(7, (i) {
-                final count = days[i];
+                final count = i < days.length ? days[i] : 0;
                 final height = maxBar > 0
                     ? (count / maxBar).clamp(0.1, 1.0)
                     : 0.0;
