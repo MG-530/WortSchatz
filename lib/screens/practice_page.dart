@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../models/word.dart';
 import '../services/database_service.dart';
+import '../services/streak_service.dart';
 import '../widgets/header.dart';
 
 class PracticePage extends StatefulWidget {
-  const PracticePage({super.key});
+  final String level;
+  const PracticePage({required this.level, super.key});
   @override
   State<PracticePage> createState() => _PracticeState();
 }
@@ -27,9 +29,15 @@ class _PracticeState extends State<PracticePage> {
   }
 
   Future<void> load() async {
-    words = await VocabularyDb.instance.all(level: level);
+    words = await VocabularyDb.instance.all(level: widget.level);
     words.shuffle();
     if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    answer.dispose();
+    super.dispose();
   }
 
   Word? get x => words.isEmpty ? null : words.first;
@@ -124,7 +132,7 @@ class _PracticeState extends State<PracticePage> {
                     Wrap(spacing: 8, children: [
                       for (final ch
                           in (q.german.replaceAll(' ', '').split('')
-                            ..shuffle()))
+                        ..shuffle()))
                         ActionChip(
                             label: Text(ch),
                             onPressed: () => setState(() => answer.text += ch))
