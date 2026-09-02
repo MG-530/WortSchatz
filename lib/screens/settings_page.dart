@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/header.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
+import '../services/streak_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -92,6 +93,35 @@ class _SettingsState extends State<SettingsPage> {
     }
   }
 
+  Future<void> resetLeitner() async {
+    final confirm = await showDialog<bool>(
+        context: context,
+        builder: (d) => AlertDialog(
+                title: const Text('ریست لایتنر'),
+                content: const Text(
+                    'آیا مطمئن هستید؟ تمام باکس‌ها و زمان مرور ریست می‌شود.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(d, false),
+                      child: const Text('انصراف')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(d, true),
+                      child: const Text('ریست'))
+                ]));
+    if (confirm == true) {
+      final rows = await VocabularyDb.instance.backupRows();
+      final batch = VocabularyDb.instance.batch();
+      for (final raw in rows) {
+        final x = Map<String, dynamic>.from(raw as Map);
+        batch.update('words', {'box': 0, 'next_review': null},
+            where: 'id = ?', whereArgs: [x['id']]);
+      }
+      await batch.commit(noResult: true);
+      await StreakService.reset();
+      if (mounted) setState(() => message = 'لایتنر ریست شد');
+    }
+  }
+
   @override
   Widget build(BuildContext c) => Scaffold(
         appBar: AppBar(title: const Text('تنظیمات')),
@@ -141,6 +171,12 @@ class _SettingsState extends State<SettingsPage> {
                   onPressed: restore,
                   icon: const Icon(Icons.file_upload),
                   label: const Text('ایمپورت بکاپ پیشرفت'))),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: FilledButton.icon(
+                  onPressed: resetLeitner,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('ریست لایتنر'))),
           if (message.isNotEmpty)
             Padding(
                 padding: const EdgeInsets.all(16),
