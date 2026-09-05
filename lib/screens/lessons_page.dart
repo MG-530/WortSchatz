@@ -30,7 +30,18 @@ class _LessonsState extends State<LessonsPage> {
     if (mounted) setState(() {});
   }
 
+  /// Only levels with bundled content can be selected. B1/B2 are shown
+  /// disabled ("به‌زودی") so users can't switch to an empty level.
+  static const availableLevels = ['A1', 'A2'];
+
   Future<void> changeLevel(String v) async {
+    if (!availableLevels.contains(v)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('این سطح به‌زودی اضافه می‌شود')));
+      }
+      return;
+    }
     final p = await SharedPreferences.getInstance();
     await p.setString('level', v);
     setState(() => level = v);
@@ -56,9 +67,14 @@ class _LessonsState extends State<LessonsPage> {
       return;
     }
 
+    // New words enter box 1 scheduled for TOMORROW (box-1 interval = 1 day),
+    // never "due right now". Scheduling them at DateTime.now() would make
+    // the very first "I know it" tap promote them to box 2 on the same day.
+    final tomorrow =
+        DateTime.now().add(const Duration(days: 1)).toIso8601String();
     final batch = VocabularyDb.instance.batch();
     for (final word in wordsToAdd) {
-      batch.update('words', {'box': 1, 'next_review': DateTime.now().toIso8601String()},
+      batch.update('words', {'box': 1, 'next_review': tomorrow},
           where: 'id = ?', whereArgs: [word.id]);
     }
     await batch.commit(noResult: true);
@@ -127,8 +143,14 @@ class _LessonsState extends State<LessonsPage> {
               items: const [
                 DropdownMenuItem(value: 'A1', child: Text('A1 — فعال')),
                 DropdownMenuItem(value: 'A2', child: Text('A2 — فعال')),
-                DropdownMenuItem(value: 'B1', child: Text('B1 — به‌زودی')),
-                DropdownMenuItem(value: 'B2', child: Text('B2 — به‌زودی'))
+                DropdownMenuItem(
+                    value: 'B1',
+                    enabled: false,
+                    child: Text('B1 — به‌زودی')),
+                DropdownMenuItem(
+                    value: 'B2',
+                    enabled: false,
+                    child: Text('B2 — به‌زودی'))
               ],
               onChanged: (v) {
                 if (v != null && v != level) changeLevel(v);
