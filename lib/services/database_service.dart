@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as pth;
@@ -63,17 +64,28 @@ class VocabularyDb {
           }
         }
       } else {
+        // Same word count: only backfill metadata (level). NEVER touch
+        // box / next_review here — resetting them would wipe the user's
+        // Leitner progress on every app start.
         for (var i = 0; i < words.length; i++) {
-          await _db!.update('words',
-              {'level': words[i]['level'], 'box': 0, 'next_review': null},
+          await _db!.update('words', {'level': words[i]['level']},
               where: 'id = ?', whereArgs: [words[i]['id']]);
         }
       }
-    } catch (_) {
-      await _db!.rawUpdate('UPDATE words SET box = 0, next_review = NULL');
-      for (var i = 0; i < words.length; i++) {
-        await _db!.update('words', {'level': words[i]['level']},
-            where: 'id = ?', whereArgs: [words[i]['id']]);
+    } catch (e, st) {
+      // Never fail silently: log the seed error, then attempt a
+      // non-destructive fallback (level backfill only, progress kept).
+      // If even the fallback fails, rethrow so the failure surfaces
+      // instead of corrupting data quietly.
+      debugPrint('VocabularyDb seed failed: $e\n$st');
+      try {
+        for (var i = 0; i < words.length; i++) {
+          await _db!.update('words', {'level': words[i]['level']},
+              where: 'id = ?', whereArgs: [words[i]['id']]);
+        }
+      } catch (e2, st2) {
+        debugPrint('VocabularyDb fallback seed failed: $e2\n$st2');
+        rethrow;
       }
     }
   }
