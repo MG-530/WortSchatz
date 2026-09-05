@@ -127,7 +127,7 @@ class _WordsState extends State<WordsPage> {
                             subtitle: Row(
                               children: [
                                 const SizedBox(width: 4),
-                                Text('درس ${x.codeFor(x.lessons.isEmpty ? 0 : x.lessons.reduce((a, b) => a < b ? a : b))} | ${x.level} | ${typeLabel(x)}',
+                                Text('${x.level} درس ${x.lessons.isEmpty ? '–' : x.lessons.reduce((a, b) => a < b ? a : b)} ${typeLabel(x)}',
                                     style: const TextStyle(
                                         fontSize: 12, color: Colors.grey)),
                                 const Spacer(),
