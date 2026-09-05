@@ -122,6 +122,27 @@ class _SettingsState extends State<SettingsPage> {
     }
   }
 
+  Future<void> resetStreak() async {
+    final confirm = await showDialog<bool>(
+        context: context,
+        builder: (d) => AlertDialog(
+                title: const Text('ریست استریک'),
+                content: const Text(
+                    'رکورد روزهای متوالی مطالعه صفر می‌شود. ادامه می‌دهید؟'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(d, false),
+                      child: const Text('انصراف')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(d, true),
+                      child: const Text('ریست'))
+                ]));
+    if (confirm == true) {
+      await StreakService.reset();
+      if (mounted) setState(() => message = 'استریک ریست شد');
+    }
+  }
+
   @override
   Widget build(BuildContext c) => Scaffold(
         appBar: AppBar(title: const Text('تنظیمات')),
@@ -138,7 +159,7 @@ class _SettingsState extends State<SettingsPage> {
                   ],
                   onChanged: (v) {
                     if (v != null) {
-                      level = v;
+                      setState(() => level = v);
                       textSet('level', v);
                     }
                   })),
@@ -177,6 +198,12 @@ class _SettingsState extends State<SettingsPage> {
                   onPressed: resetLeitner,
                   icon: const Icon(Icons.refresh),
                   label: const Text('ریست لایتنر'))),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: OutlinedButton.icon(
+                  onPressed: resetStreak,
+                  icon: const Icon(Icons.local_fire_department_outlined),
+                  label: const Text('ریست استریک'))),
           if (message.isNotEmpty)
             Padding(
                 padding: const EdgeInsets.all(16),
