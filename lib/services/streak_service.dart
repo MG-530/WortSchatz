@@ -18,6 +18,11 @@ class StreakService {
   static const _keyLastStudyDate = 'lastStudyDate';
   static const _keyDailyCount = 'dailyCount_';
 
+  /// Minimum number of graded answers for an *unfinished* session to count
+  /// toward the streak. Finished sessions always count (even 1 word).
+  /// This keeps brief visits / accidental opens from inflating the streak.
+  static const int minAnswersForStreak = 3;
+
   static Future<StreakData> getStreak() async {
     final prefs = await SharedPreferences.getInstance();
     return StreakData(
@@ -44,7 +49,10 @@ class StreakService {
       return;
     }
 
-    final yesterdayInt = todayInt - 1;
+    final yesterday = DateTime(today.year, today.month, today.day)
+        .subtract(const Duration(days: 1));
+    final yesterdayInt =
+        yesterday.year * 10000 + yesterday.month * 100 + yesterday.day;
     if (lastDate == yesterdayInt) {
       currentStreak++;
     } else {
@@ -80,6 +88,9 @@ class StreakService {
     await prefs.remove(_keyStreak);
     await prefs.remove(_keyLongestStreak);
     await prefs.remove(_keyLastStudyDate);
+    for (final k in prefs.getKeys().where((k) => k.startsWith(_keyDailyCount))) {
+      await prefs.remove(k);
+    }
   }
 
   static String _dateKey(DateTime date) =>

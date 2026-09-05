@@ -22,10 +22,26 @@ class _ReviewSessionState extends State<ReviewSession> {
   int i = 0;
   bool show = false;
 
+  /// Graded answers in this session + whether the streak was already
+  /// recorded at natural finish (prevents double counting when the
+  /// extra-words session replaces this one).
+  int _answered = 0;
+  bool _streakRecorded = false;
+
   @override
   void initState() {
     super.initState();
     show = false;
+  }
+
+  @override
+  void dispose() {
+    // Session ended early (user navigated back): only count it when real
+    // work was done, never for a brief visit.
+    if (!_streakRecorded && _answered >= StreakService.minAnswersForStreak) {
+      StreakService.recordStudySession(wordsStudied: _answered);
+    }
+    super.dispose();
   }
 
   @override
@@ -86,17 +102,22 @@ class _ReviewSessionState extends State<ReviewSession> {
 
   void _handleAnswer(bool known) {
     VocabularyDb.instance.grade(widget.words[i], known);
-    if (widget.words.length > 1 || i + 1 < widget.words.length) {
+    _answered++;
+    if (i + 1 < widget.words.length) {
       setState(() {
         i++;
+        show = false;
       });
     } else {
-      _showEndOfReviewDialog(known);
+      _finishSession();
     }
   }
 
-  Future<void> _showEndOfReviewDialog(bool known) async {
-    await StreakService.recordStudySession();
+  /// Called only when the user grades the LAST card — i.e. actually
+  /// finishes the session — never on mere navigation away.
+  Future<void> _finishSession() async {
+    _streakRecorded = true;
+    await StreakService.recordStudySession(wordsStudied: _answered);
     if (widget.extra.isNotEmpty && mounted) {
       final go = await showDialog<bool>(
           context: context,

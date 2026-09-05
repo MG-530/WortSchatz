@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../models/word.dart';
 import '../services/database_service.dart';
+import '../services/streak_service.dart';
 
 class WritingReviewSession extends StatefulWidget {
   final List<Word> words;
@@ -21,12 +22,27 @@ class _WritingReviewState extends State<WritingReviewSession> {
   final tts = FlutterTts();
   late List<String> letters;
 
+  /// Graded answers in this session + whether the streak was recorded
+  /// at natural finish (avoids double counting on pop).
+  int _graded = 0;
+  bool _streakRecorded = false;
+
   Word get w => widget.words[i];
 
   @override
   void initState() {
     super.initState();
     lettersForWord();
+  }
+
+  @override
+  void dispose() {
+    // Early exit: count the session only when real work was done.
+    if (!_streakRecorded && _graded >= StreakService.minAnswersForStreak) {
+      StreakService.recordStudySession(wordsStudied: _graded);
+    }
+    input.dispose();
+    super.dispose();
   }
 
   void lettersForWord() {
@@ -51,6 +67,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
     if (checked) return;
     final ok = typed.trim().toLowerCase() == w.german.trim().toLowerCase();
     await VocabularyDb.instance.grade(w, ok);
+    _graded++;
     setState(() {
       checked = true;
       correct = ok;
@@ -60,6 +77,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
   Future<void> unknown() async {
     if (checked) return;
     await VocabularyDb.instance.grade(w, false);
+    _graded++;
     setState(() {
       checked = true;
       correct = false;
@@ -68,6 +86,9 @@ class _WritingReviewState extends State<WritingReviewSession> {
 
   void next() {
     if (i + 1 >= widget.words.length) {
+      // Natural finish of the session → record the streak.
+      _streakRecorded = true;
+      StreakService.recordStudySession(wordsStudied: _graded);
       Navigator.pop(context);
       return;
     }

@@ -20,6 +20,11 @@ class _LearnState extends State<LearnSession> {
   int index = 0;
   bool revealed = false, auto = true, online = false;
 
+  /// Number of cards the user actually graded in this session.
+  /// The streak is recorded on leave ONLY when this reaches a meaningful
+  /// threshold — briefly opening a lesson never counts.
+  int _graded = 0;
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +50,9 @@ class _LearnState extends State<LearnSession> {
 
   @override
   void dispose() {
+    if (_graded >= StreakService.minAnswersForStreak) {
+      StreakService.recordStudySession(wordsStudied: _graded);
+    }
     super.dispose();
   }
 
@@ -115,6 +123,7 @@ class _LearnState extends State<LearnSession> {
                 FilledButton.icon(
                     onPressed: () {
                       VocabularyDb.instance.grade(w, true);
+                      _graded++;
                       move(1);
                     },
                     icon: const Icon(Icons.check),
@@ -122,6 +131,7 @@ class _LearnState extends State<LearnSession> {
                 FilledButton.icon(
                     onPressed: () {
                       VocabularyDb.instance.grade(w, false);
+                      _graded++;
                       move(1);
                     },
                     icon: const Icon(Icons.close),
