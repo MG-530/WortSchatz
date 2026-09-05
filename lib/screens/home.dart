@@ -2,10 +2,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../widgets/streak_chart.dart';
 import '../services/streak_service.dart';
-import '../widgets/header.dart';
 import '../widgets/stat_card.dart';
 import '../services/database_service.dart';
-import '../models/word.dart';
+import '../services/settings_service.dart';
 import 'lessons_page.dart';
 import 'review_page.dart';
 import 'words_page.dart';
@@ -19,11 +18,25 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   int tab = 0;
-  final pages = const [Dashboard(), LessonsPage(), ReviewPage(), WordsPage()];
+  int _dashSeed = 0;
+  // Dashboard is rebuilt (fresh key) whenever we return to it so a level
+  // change in Settings/Lessons is reflected immediately.
+  List<Widget> get pages => [
+        Dashboard(key: ValueKey('dash$_dashSeed')),
+        const LessonsPage(),
+        const ReviewPage(),
+        const WordsPage()
+      ];
 
   @override
   void initState() {
     super.initState();
+  }
+
+  Future<void> _openSettings(BuildContext c) async {
+    await Navigator.push(
+        c, MaterialPageRoute(builder: (_) => const SettingsPage()));
+    setState(() => _dashSeed++);
   }
 
   @override
@@ -35,15 +48,15 @@ class _HomeState extends State<Home> {
               actions: [
                 IconButton(
                     icon: const Icon(Icons.settings),
-                    onPressed: () => Navigator.push(
-                        c,
-                        MaterialPageRoute(
-                            builder: (_) => const SettingsPage())))
+                    onPressed: () => _openSettings(c))
               ]),
           body: pages[tab],
           bottomNavigationBar: NavigationBar(
               selectedIndex: tab,
-              onDestinationSelected: (i) => setState(() => tab = i),
+              onDestinationSelected: (i) => setState(() {
+                    if (i == 0) _dashSeed++;
+                    tab = i;
+                  }),
               destinations: const [
                 NavigationDestination(
                     icon: Icon(Icons.dashboard_outlined),
@@ -72,7 +85,7 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> {
   Map<String, int> s = {};
-  List<Word> w = [];
+  String level = 'A1';
   int currentStreak = 0;
   int longestStreak = 0;
   List<int> streakDays = [];
@@ -84,16 +97,14 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> load() async {
-    w = await VocabularyDb.instance.all();
-    final x = await VocabularyDb.instance.stats();
+    level = await AppSettings.level;
+    final x = await VocabularyDb.instance.stats(level: level);
     final sd = await StreakService.getStreak();
     streakDays = await StreakService.getLast7Days();
     currentStreak = sd.currentStreak;
     longestStreak = sd.longestStreak;
     if (mounted) setState(() => s = x);
   }
-
-  int b(int n) => w.where((x) => x.box == n).length;
 
   @override
   Widget build(BuildContext c) => SafeArea(
@@ -113,11 +124,17 @@ class _DashboardState extends State<Dashboard> {
                       const SizedBox(height: 8),
                       Text('یادگیری آلمانی با مرور هوشمند',
                           style: const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      Chip(
+                          label: Text('سطح فعال: $level'),
+                          visualDensity: VisualDensity.compact),
                     ])),
-              StreakChart(
-                  currentStreak: currentStreak,
-                  longestStreak: longestStreak,
-                  days: streakDays),
+              Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: StreakChart(
+                      currentStreak: currentStreak,
+                      longestStreak: longestStreak,
+                      days: streakDays)),
               Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Card(
@@ -139,35 +156,9 @@ class _DashboardState extends State<Dashboard> {
                         StatCard('کل واژه‌ها', '${s['total'] ?? 0}',
                             Icons.library_books),
                         StatCard('یادگرفته‌شده', '${s['learned'] ?? 0}',
-                            Icons.check_circle),
+                             Icons.check_circle),
                         StatCard('جدید', '${s['fresh'] ?? 0}', Icons.fiber_new),
                         StatCard('آماده مرور', '${s['due'] ?? 0}', Icons.today)
                       ])),
-              const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: Text('نمایششماتیک جعبه‌های لایتنر',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-              SizedBox(
-                  height: 120,
-                  child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        for (int i = 0; i <= 5; i++)
-                          Container(
-                              width: 116,
-                              margin: const EdgeInsets.only(left: 8),
-                              child: Card(
-                                  child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                    Text('باکس $i',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    Text('${b(i)} واژه'),
-                                    Text(i == 0 ? 'جدید' : 'مرور')
-                                  ])))
-                      ]))
           ])));
 }
