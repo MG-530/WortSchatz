@@ -15,12 +15,16 @@ class PracticePage extends StatefulWidget {
 
 class _PracticeState extends State<PracticePage> {
   List<Word> words = [];
+  int idx = 0;
   int mode = 0;
   String writingMode = 'listen';
   final answer = TextEditingController();
   String feedback = '';
   DateTime? started;
   final tts = FlutterTts();
+
+  /// Correct answers in this session (for streak tracking).
+  int _correct = 0;
 
   @override
   void initState() {
@@ -36,11 +40,14 @@ class _PracticeState extends State<PracticePage> {
 
   @override
   void dispose() {
+    if (_correct >= StreakService.minAnswersForStreak) {
+      StreakService.recordStudySession(wordsStudied: _correct);
+    }
     answer.dispose();
     super.dispose();
   }
 
-  Word? get x => words.isEmpty ? null : words.first;
+  Word? get x => words.isEmpty ? null : words[idx % words.length];
 
   Future<void> listen() async {
     if (x != null) {
@@ -51,7 +58,33 @@ class _PracticeState extends State<PracticePage> {
 
   void check(String correct) {
     final ok = answer.text.trim().toLowerCase() == correct.trim().toLowerCase();
-    setState(() => feedback = ok ? 'درست است' : 'اشتباه است؛ دوباره تلاش کن');
+    if (ok) {
+      _correct++;
+      setState(() => feedback = 'درست است');
+      // Clear the field and move to the next word so the user never has
+      // to clear it manually.
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (!mounted) return;
+        setState(() {
+          idx = (idx + 1) % words.length;
+          answer.clear();
+          feedback = '';
+          started = null;
+        });
+      });
+    } else {
+      setState(() => feedback = 'اشتباه است؛ دوباره تلاش کن');
+    }
+  }
+
+  /// Skip the current word without grading.
+  void skip() {
+    setState(() {
+      idx = (idx + 1) % words.length;
+      answer.clear();
+      feedback = '';
+      started = null;
+    });
   }
 
   @override
@@ -92,10 +125,17 @@ class _PracticeState extends State<PracticePage> {
                       textDirection: ui.TextDirection.ltr,
                       decoration: const InputDecoration(
                           labelText: 'معنی را به آلمانی بنویس',
-                          border: OutlineInputBorder())),
-                  FilledButton(
-                      onPressed: () => check(q.german),
-                      child: const Text('بررسی')),
+                           border: OutlineInputBorder())),
+                  Row(children: [
+                    Expanded(
+                        child: FilledButton(
+                            onPressed: () => check(q.german),
+                            child: const Text('بررسی'))),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: OutlinedButton(
+                            onPressed: skip, child: const Text('رد شدن')))
+                  ]),
                   if (feedback.isNotEmpty)
                     Text(feedback,
                         style: TextStyle(
@@ -144,9 +184,16 @@ class _PracticeState extends State<PracticePage> {
                             labelText: 'لغت ساخته‌شده',
                             border: OutlineInputBorder()))
                   ],
-                  FilledButton(
-                      onPressed: () => check(q.german),
-                      child: const Text('بررسی')),
+                  Row(children: [
+                    Expanded(
+                        child: FilledButton(
+                            onPressed: () => check(q.german),
+                            child: const Text('بررسی'))),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: OutlinedButton(
+                            onPressed: skip, child: const Text('رد شدن')))
+                  ]),
                   if (feedback.isNotEmpty)
                     Text(feedback,
                         style: TextStyle(
