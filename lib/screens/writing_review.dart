@@ -2,7 +2,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../models/word.dart';
+import '../services/audio_service.dart';
 import '../services/database_service.dart';
+import '../services/settings_service.dart';
 import '../services/streak_service.dart';
 
 class WritingReviewSession extends StatefulWidget {
@@ -50,8 +52,9 @@ class _WritingReviewState extends State<WritingReviewSession> {
   }
 
   Future<void> listen() async {
+    final withArticle = await AppSettings.articleTts;
     await tts.setLanguage('de-DE');
-    await tts.speak(w.german);
+    await tts.speak(spokenText(w, withArticle: withArticle));
   }
 
   void addLetter(String ch) {

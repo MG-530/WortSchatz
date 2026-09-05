@@ -2,7 +2,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../models/word.dart';
+import '../services/audio_service.dart';
 import '../services/database_service.dart';
+import '../services/settings_service.dart';
 import '../services/streak_service.dart';
 import '../widgets/header.dart';
 
@@ -51,8 +53,9 @@ class _PracticeState extends State<PracticePage> {
 
   Future<void> listen() async {
     if (x != null) {
+      final withArticle = await AppSettings.articleTts;
       await tts.setLanguage('de-DE');
-      await tts.speak(x!.german);
+      await tts.speak(spokenText(x!, withArticle: withArticle));
     }
   }
 

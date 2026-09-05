@@ -5,6 +5,8 @@ class AppSettings {
       (await SharedPreferences.getInstance()).getBool('autoPlay') ?? true;
   static Future<bool> get onlineAudio async =>
       (await SharedPreferences.getInstance()).getBool('onlineAudio') ?? false;
+  static Future<bool> get articleTts async =>
+      (await SharedPreferences.getInstance()).getBool('articleTts') ?? true;
   static Future<String> get reminder async =>
       (await SharedPreferences.getInstance()).getString('reminder') ?? '20:00';
   static Future<String> get course async =>

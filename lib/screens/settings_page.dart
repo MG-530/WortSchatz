@@ -15,10 +15,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsState extends State<SettingsPage> {
-  bool auto = true, online = false;
-  String time = '20:00',
-      level = 'A1',
-      message = '';
+  bool auto = true, online = false, articleTts = true;
+  String time = '20:00', level = 'A1', message = '';
 
   @override
   void initState() {
@@ -32,6 +30,7 @@ class _SettingsState extends State<SettingsPage> {
     setState(() {
       auto = p.getBool('autoPlay') ?? true;
       online = p.getBool('onlineAudio') ?? false;
+      articleTts = p.getBool('articleTts') ?? true;
       time = p.getString('reminder') ?? '20:00';
       level = p.getString('level') ?? 'A1';
     });
@@ -39,7 +38,14 @@ class _SettingsState extends State<SettingsPage> {
 
   Future<void> boolSet(String k, bool v) async {
     await AppSettings.setBool(k, v);
-    setState(() => message = 'ذخیره شد');
+    if (mounted) {
+      setState(() {
+        if (k == 'autoPlay') auto = v;
+        if (k == 'onlineAudio') online = v;
+        if (k == 'articleTts') articleTts = v;
+        message = 'ذخیره شد';
+      });
+    }
   }
 
   Future<void> textSet(String k, String v) async {
@@ -170,10 +176,15 @@ class _SettingsState extends State<SettingsPage> {
               onChanged: (v) => boolSet('autoPlay', v)),
           SwitchListTile(
               title: const Text('استفاده از تلفظ آنلاین'),
-              subtitle:
-                  const Text('در صورت نبود اینترنت، تلفظ آفلاین استفاده می‌شود'),
+              subtitle: const Text(
+                  'در صورت نبود اینترنت، تلفظ آفلاین استفاده می‌شود'),
               value: online,
               onChanged: (v) => boolSet('onlineAudio', v)),
+          SwitchListTile(
+              title: const Text('تلفظ همراه با ارتیکل'),
+              subtitle: const Text('روشن: «der Apfel» — خاموش: فقط «Apfel»'),
+              value: articleTts,
+              onChanged: (v) => boolSet('articleTts', v)),
           ListTile(
               title: const Text('زمان یادآوری مرور'),
               subtitle: Text(time),
