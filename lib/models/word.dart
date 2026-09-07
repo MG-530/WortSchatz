@@ -1,6 +1,14 @@
 class Word {
   final int id;
-  final String german, display, article, persian, english, pronunciation, type, gender, level;
+  final String german,
+      display,
+      article,
+      persian,
+      english,
+      pronunciation,
+      type,
+      gender,
+      level;
   final List<int> lessons;
   final int box;
   final DateTime? nextReview;
@@ -44,8 +52,8 @@ class Word {
       );
 
   /// Display-only lesson code like A1-1 (= lesson 1 of A1),
-  /// A2-1 (= lesson 1 of A2). Storage is untouched:
-  /// A2 lessons are stored as 101..112, displayed as 1..12.
+  /// A2-1 (= lesson 1 of A2). Lessons are stored normalized as 1..12
+  /// per level (level column distinguishes A1/A2).
   static String lessonCode(String level, int stored) {
     final d = stored > 100 ? stored - 100 : stored;
     return '$level-$d';

@@ -15,14 +15,29 @@ class VocabularyDb {
   /// Fresh installs get all words with box=0 (Leitner starts empty).
   /// Stale DBs (e.g. old 1711-word build) are reseeded while keeping
   /// the user's Leitner progress (matched by german word).
+  /// Enrollment model:
+  /// - box < 0  (-1): NOT in Leitner yet (fresh pool, invisible to review).
+  /// - box == 0: Leitner entry — enrolled via explicit "add to Leitner".
+  /// - box 1..5: Leitner progress.
+  /// Fresh installs seed everything as -1, so every box (including box 0)
+  /// starts empty. Entry into Leitner is ONLY box -1 → 0 through add
+  /// actions; re-adding enrolled words is impossible by construction.
   Future<void> init() async {
     final dbPath = pth.join(await getDatabasesPath(), 'starten_wir_a1.db');
-    _db = await openDatabase(dbPath, version: 2, onCreate: (db, v) async {
+    _db = await openDatabase(dbPath, version: 3, onCreate: (db, v) async {
       await db.execute(
           'CREATE TABLE words(id INTEGER PRIMARY KEY, german TEXT, display TEXT, article TEXT, persian TEXT, english TEXT, pronunciation TEXT, word_type TEXT, gender TEXT, level TEXT, lessons TEXT, box INTEGER DEFAULT 0, next_review TEXT)');
     }, onUpgrade: (db, oldVersion, newVersion) async {
       if (oldVersion < 2) {
         await db.execute('ALTER TABLE words ADD COLUMN level TEXT');
+      }
+      if (oldVersion < 3) {
+        // One-way migration to the enrollment model: old box-0 rows were
+        // never deliberately enrolled (old add went straight to box 1),
+        // so they become unenrolled (-1). Rows in boxes >= 1 keep the
+        // user's real progress and are never touched.
+        await db.rawUpdate(
+            'UPDATE words SET box = -1, next_review = NULL WHERE box = 0');
       }
     });
     final raw =
@@ -39,6 +54,12 @@ class VocabularyDb {
     }
     final words = <Map<String, dynamic>>[];
     for (final x in raw) {
+      // Lesson numbers are ALWAYS 1..12. The old 101..112 A2 offset was
+      // only a level hack — the level column distinguishes levels now.
+      final lessons = (x['lessons'] as List? ?? []).map((l) {
+        final n = l as int;
+        return n > 100 ? n - 100 : n;
+      }).join(',');
       words.add({
         'id': words.length + 1,
         'german': x['german'] ?? '',
@@ -50,37 +71,42 @@ class VocabularyDb {
         'word_type': x['word_type'] ?? 'other',
         'gender': x['gender'] ?? '',
         'level': x['level'] ?? 'A1',
-        'lessons': (x['lessons'] as List? ?? []).join(','),
-        'box': 0,
+        'lessons': lessons,
+        'box': -1,
         'next_review': null,
       });
     }
     try {
       if (fresh) {
         for (var chunkStart = 0; chunkStart < words.length; chunkStart += 500) {
-          final chunkEnd = (chunkStart + 500 < words.length) ? chunkStart + 500 : words.length;
+          final chunkEnd = (chunkStart + 500 < words.length)
+              ? chunkStart + 500
+              : words.length;
           for (var i = chunkStart; i < chunkEnd; i++) {
             await _db!.insert('words', words[i]);
           }
         }
       } else {
-        // Same word count: only backfill metadata (level). NEVER touch
-        // box / next_review here — resetting them would wipe the user's
-        // Leitner progress on every app start.
+        // Same word count: only backfill metadata (level + normalized
+        // lessons). NEVER touch box / next_review here — resetting them
+        // would wipe the user's Leitner progress on every app start.
+        // This also migrates old DBs storing A2 lessons as 101..112.
         for (var i = 0; i < words.length; i++) {
-          await _db!.update('words', {'level': words[i]['level']},
+          await _db!.update('words',
+              {'level': words[i]['level'], 'lessons': words[i]['lessons']},
               where: 'id = ?', whereArgs: [words[i]['id']]);
         }
       }
     } catch (e, st) {
       // Never fail silently: log the seed error, then attempt a
-      // non-destructive fallback (level backfill only, progress kept).
+      // non-destructive fallback (metadata backfill only, progress kept).
       // If even the fallback fails, rethrow so the failure surfaces
       // instead of corrupting data quietly.
       debugPrint('VocabularyDb seed failed: $e\n$st');
       try {
         for (var i = 0; i < words.length; i++) {
-          await _db!.update('words', {'level': words[i]['level']},
+          await _db!.update('words',
+              {'level': words[i]['level'], 'lessons': words[i]['lessons']},
               where: 'id = ?', whereArgs: [words[i]['id']]);
         }
       } catch (e2, st2) {
@@ -92,7 +118,8 @@ class VocabularyDb {
 
   Future<void> init_merged() => init();
 
-  Future<List<Word>> all({String query = '', String? level, int? lesson, String? wordType}) async {
+  Future<List<Word>> all(
+      {String query = '', String? level, int? lesson, String? wordType}) async {
     var where = <String>[];
     var args = <Object?>[];
     if (query.trim().isNotEmpty) {
@@ -104,8 +131,9 @@ class VocabularyDb {
       args.add(level);
     }
     if (lesson != null) {
-      where.add('lessons LIKE ?');
-      args.add('%$lesson%');
+      // Exact lesson match: comma-wrap so lesson 1 doesn't match 10..12.
+      where.add("(',' || lessons || ',') LIKE ?");
+      args.add('%,$lesson,%');
     }
     if (wordType != null) {
       where.add('word_type = ?');
@@ -123,11 +151,9 @@ class VocabularyDb {
     final where = level == null
         ? 'box > 0 AND (next_review IS NULL OR next_review <= ?)'
         : 'box > 0 AND level LIKE ? AND (next_review IS NULL OR next_review <= ?)';
-    final args =
-        level == null ? [now] : ['%$level%', now];
+    final args = level == null ? [now] : ['%$level%', now];
     final rows = await _db!.rawQuery(
-        'SELECT * FROM words WHERE $where ORDER BY next_review LIMIT 30',
-        args);
+        'SELECT * FROM words WHERE $where ORDER BY next_review LIMIT 30', args);
     return rows.map(Word.fromMap).toList();
   }
 
@@ -136,7 +162,14 @@ class VocabularyDb {
     return !w.nextReview!.isAfter(DateTime.now());
   }
 
+  /// Grade a Leitner answer. Unenrolled words (box < 0) are NEVER
+  /// auto-enrolled by studying or reviewing — enrollment happens only
+  /// through explicit "add to Leitner" actions (box -1 → 0). Enrolled
+  /// words (box >= 0) grade normally: box 0 → 1 → … → 5 on known,
+  /// one box back on forgotten. Re-adding is impossible because add
+  /// paths only accept box < 0.
   Future<void> grade(Word w, bool known) async {
+    if (w.box < 0) return;
     if (!await isDue(w)) return;
     final box = known ? min(5, w.box + 1) : max(0, w.box - 1);
     final days = [0, 1, 2, 4, 7, 14][box];

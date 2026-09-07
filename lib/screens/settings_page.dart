@@ -105,7 +105,7 @@ class _SettingsState extends State<SettingsPage> {
         builder: (d) => AlertDialog(
                 title: const Text('ریست لایتنر'),
                 content: const Text(
-                    'آیا مطمئن هستید؟ تمام باکس‌ها و زمان مرور ریست می‌شود.'),
+                    'آیا مطمئن هستید؟ همه واژه‌ها از لایتنر خارج می‌شوند (به حالت پیش‌فرض).'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(d, false),
@@ -119,7 +119,8 @@ class _SettingsState extends State<SettingsPage> {
       final batch = VocabularyDb.instance.batch();
       for (final raw in rows) {
         final x = Map<String, dynamic>.from(raw as Map);
-        batch.update('words', {'box': 0, 'next_review': null},
+        // Unenroll everything: back to the default empty-Leitner state.
+        batch.update('words', {'box': -1, 'next_review': null},
             where: 'id = ?', whereArgs: [x['id']]);
       }
       await batch.commit(noResult: true);

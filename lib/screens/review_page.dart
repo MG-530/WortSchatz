@@ -35,33 +35,73 @@ class _ReviewState extends State<ReviewPage> {
     if (mounted) setState(() {});
   }
 
-  /// Only words enrolled in Leitner (box >= 1) are reviewable here.
-  /// Box 0 is the "not in Leitner yet" pool — it must be added via
-  /// Lessons ("افزودن به لایتنر") or a first Learn tap, never reviewed
-  /// directly, so a fresh install starts with an empty Leitner.
+  /// Box 0 (Leitner entry, enrolled via "add to Leitner") words are
+  /// ALWAYS due — newly added words can be reviewed immediately, and the
+  /// first real review promotes them to box 1.
   bool due(Word w) =>
-      w.box > 0 &&
-      (w.nextReview == null || !w.nextReview!.isAfter(DateTime.now()));
+      w.box == 0 ||
+      w.nextReview == null ||
+      !w.nextReview!.isAfter(DateTime.now());
+
+  /// Due words actually enrolled in Leitner (boxes 1–5). This is what the
+  /// Leitner box cards and "review ready" cover — box 0 has its own
+  /// dedicated practice button below.
+  bool dueEnrolled(Word w) => w.box > 0 && due(w);
   int total(int b) => all.where((w) => w.box == b).length;
   int ready(int b) => all.where((w) => w.box == b && due(w)).length;
+  int get newCount => all.where((w) => w.box == 0).length;
+  int get dueEnrolledCount => all.where(dueEnrolled).length;
+  bool get hasDue => dueEnrolledCount > 0;
 
   /// Max words per "review all" session — reviewing hundreds of due
   /// words at once is neither usable nor useful for retention.
   static const int maxReviewAll = 30;
 
+  String _sheetTitle(int b) => b < 0
+      ? 'مرور همهٔ واژه‌ها'
+      : b == 0
+          ? 'تمرین واژه‌های جدید'
+          : 'مرور باکس $b';
+  String _sessionTitle(int b) => b < 0
+      ? 'مرور آماده'
+      : b == 0
+          ? 'تمرین جدید'
+          : 'مرور باکس $b';
+  String _writingTitle(int b) =>
+      'نوشتاری — ${b < 0 ? 'همه' : b == 0 ? 'جدید' : 'باکس $b'}';
+
+  /// Push a session and reload counts when it pops, so grading is
+  /// immediately visible (no stale box counts).
+  void _open(Widget page) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page)).then((_) {
+      if (mounted) load();
+    });
+  }
+
   void choose(int b) {
-    // For "review all", only due words are eligible and the session is
-    // capped at [maxReviewAll]; there is no "later" pile in that mode
-    // (title says "مرور آماده" — ready words only).
+    // b < 0: "review ready" — enrolled due words only, capped.
+    // b == 0: new-words review — box 0 entry words, capped.
+    // b >= 1: single-box review with a "later" pile.
     final List<Word> readyWords;
     final List<Word> later;
     if (b < 0) {
-      readyWords = all.where(due).take(maxReviewAll).toList();
+      readyWords = all.where(dueEnrolled).take(maxReviewAll).toList();
+      later = const [];
+    } else if (b == 0) {
+      readyWords = all.where((w) => w.box == 0).take(maxReviewAll).toList();
       later = const [];
     } else {
       final selected = all.where((w) => w.box == b).toList();
       readyWords = selected.where(due).toList();
       later = selected.where((w) => !due(w)).toList();
+    }
+    // Never open a session with zero ready words — WritingReview crashes
+    // on empty lists (RangeError in initState) and an empty normal
+    // session is useless anyway.
+    if (readyWords.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('واژه‌ای آماده مرور نیست')));
+      return;
     }
     showModalBottomSheet(
         context: context,
@@ -69,30 +109,26 @@ class _ReviewState extends State<ReviewPage> {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
               Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text(b < 0 ? 'مرور همهٔ واژه‌ها' : 'مرور باکس $b',
+                  child: Text(_sheetTitle(b),
                       style: const TextStyle(
                           fontSize: 20, fontWeight: FontWeight.bold))),
-              if (b < 0 && all.where(due).length > readyWords.length)
+              if (b < 0 && dueEnrolledCount > readyWords.length)
                 Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
-                        '${all.where(due).length} واژه آماده است؛ این نوبت ${readyWords.length} تای اول مرور می‌شود',
-                        style: const TextStyle(
-                            fontSize: 13, color: Colors.grey))),
+                        '$dueEnrolledCount واژه آماده است؛ این نوبت ${readyWords.length} تای اول مرور می‌شود',
+                        style:
+                            const TextStyle(fontSize: 13, color: Colors.grey))),
               ListTile(
                   leading: const Icon(Icons.style),
                   title: const Text('مرور عادی'),
                   subtitle: Text('${readyWords.length} واژه آماده مرور'),
                   onTap: () {
                     Navigator.pop(sheet);
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => ReviewSession(
-                                words: readyWords,
-                                title: b < 0 ? 'مرور آماده' : 'مرور باکس $b',
-                                extra: later)));
+                    _open(ReviewSession(
+                        words: readyWords,
+                        title: _sessionTitle(b),
+                        extra: later));
                   }),
               ListTile(
                   leading: const Icon(Icons.keyboard),
@@ -100,12 +136,8 @@ class _ReviewState extends State<ReviewPage> {
                   subtitle: Text('${readyWords.length} واژه آماده نوشتاری'),
                   onTap: () {
                     Navigator.pop(sheet);
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => WritingReviewSession(
-                                words: readyWords,
-                                title: 'نوشتاری — ${b < 0 ? 'همه' : 'باکس $b'}')));
+                    _open(WritingReviewSession(
+                        words: readyWords, title: _writingTitle(b)));
                   })
             ])));
   }
@@ -119,8 +151,7 @@ class _ReviewState extends State<ReviewPage> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: DropdownButtonFormField<String>(
                 value: level,
-                decoration:
-                    const InputDecoration(labelText: 'سطح'),
+                decoration: const InputDecoration(labelText: 'سطح'),
                 items: const [
                   DropdownMenuItem(value: 'A1', child: Text('A1')),
                   DropdownMenuItem(value: 'A2', child: Text('A2')),
@@ -131,6 +162,9 @@ class _ReviewState extends State<ReviewPage> {
         Padding(
             padding: const EdgeInsets.all(12),
             child: Wrap(spacing: 8, runSpacing: 8, children: [
+              // Only enrolled boxes (1–5) live here. Box 0 is the
+              // not-in-Leitner pool with its own practice button below,
+              // so a fresh install or a reset shows a truly empty Leitner.
               for (int b = 1; b <= 5; b++)
                 SizedBox(
                     width: 160,
@@ -153,8 +187,16 @@ class _ReviewState extends State<ReviewPage> {
         Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: FilledButton.icon(
-                onPressed: all.isEmpty ? null : () => choose(-1),
+                onPressed: !hasDue ? null : () => choose(-1),
                 icon: const Icon(Icons.play_arrow),
-                label: const Text('مرور آماده')))
+                label: const Text('مرور آماده'))),
+        const SizedBox(height: 8),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: OutlinedButton.icon(
+                onPressed: newCount == 0 ? null : () => choose(0),
+                icon: const Icon(Icons.fiber_new),
+                label: Text('تمرین واژه‌های جدید ($newCount واژه)'))),
+        const SizedBox(height: 8)
       ]));
 }

@@ -51,15 +51,27 @@ class _LessonsState extends State<LessonsPage> {
 
   int count(int l) => w.where((x) => x.lessons.contains(l)).length;
 
-  Future<void> addScope(String title, {int? lesson, String? levelFilter}) async {
+  Future<void> addScope(String title,
+      {int? lesson, String? levelFilter}) async {
     // Load fresh data to ensure we have the latest box status
-    final freshWords = await VocabularyDb.instance.all(level: levelFilter ?? level);
-    
+    final freshWords =
+        await VocabularyDb.instance.all(level: levelFilter ?? level);
+
     final wordsToAdd = freshWords.where((x) {
       if (lesson != null && !x.lessons.contains(lesson)) return false;
       if (levelFilter != null && x.level != levelFilter) return false;
-      return x.box == 0;
+      // Entry into Leitner is ONLY box -1 (unenrolled) → box 0.
+      // Words already enrolled (box >= 0, including box 0 itself and
+      // higher boxes with real progress) are NEVER re-added, rescheduled
+      // or moved here — re-pressing add leaves them exactly as they are.
+      return x.box < 0;
     }).toList();
+
+    final alreadyIn = freshWords.where((x) {
+      if (lesson != null && !x.lessons.contains(lesson)) return false;
+      if (levelFilter != null && x.level != levelFilter) return false;
+      return x.box >= 0;
+    }).length;
 
     if (wordsToAdd.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,21 +79,21 @@ class _LessonsState extends State<LessonsPage> {
       return;
     }
 
-    // New words enter box 1 scheduled for TOMORROW (box-1 interval = 1 day),
-    // never "due right now". Scheduling them at DateTime.now() would make
-    // the very first "I know it" tap promote them to box 2 on the same day.
-    final tomorrow =
-        DateTime.now().add(const Duration(days: 1)).toIso8601String();
+    // New words enter at box 0 (the Leitner entry point) with no
+    // schedule, so they are reviewable immediately; the first real
+    // review promotes them to box 1. Enrolled words are never touched.
     final batch = VocabularyDb.instance.batch();
     for (final word in wordsToAdd) {
-      batch.update('words', {'box': 1, 'next_review': tomorrow},
+      batch.update('words', {'box': 0, 'next_review': null},
           where: 'id = ?', whereArgs: [word.id]);
     }
     await batch.commit(noResult: true);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${wordsToAdd.length} واژه از $title به لایتنر اضافه شد')));
+          content: Text(alreadyIn == 0
+              ? '${wordsToAdd.length} واژه از $title به لایتنر اضافه شد'
+              : '${wordsToAdd.length} واژه اضافه شد ($alreadyIn واژه قبلاً در لایتنر بود و دست نخورد)')));
       load();
     }
   }
@@ -95,7 +107,9 @@ class _LessonsState extends State<LessonsPage> {
     return list;
   }
 
-  /// A2 lessons are stored as 101..112 — display them as 1..12.
+  /// Lesson numbers are stored normalized as 1..12 for every level
+  /// (the old 101..112 A2 offset is migrated away on boot).
+  /// Kept as a safety net for any unmigrated row.
   int displayNum(int l) => l > 100 ? l - 100 : l;
 
   String get coverAsset => level == 'A2'
@@ -119,8 +133,7 @@ class _LessonsState extends State<LessonsPage> {
                     child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.menu_book,
-                              color: Colors.white, size: 40),
+                          Icon(Icons.menu_book, color: Colors.white, size: 40),
                           SizedBox(height: 8),
                           Text('Starten Wir',
                               style: TextStyle(
@@ -144,13 +157,9 @@ class _LessonsState extends State<LessonsPage> {
                 DropdownMenuItem(value: 'A1', child: Text('A1 — فعال')),
                 DropdownMenuItem(value: 'A2', child: Text('A2 — فعال')),
                 DropdownMenuItem(
-                    value: 'B1',
-                    enabled: false,
-                    child: Text('B1 — به‌زودی')),
+                    value: 'B1', enabled: false, child: Text('B1 — به‌زودی')),
                 DropdownMenuItem(
-                    value: 'B2',
-                    enabled: false,
-                    child: Text('B2 — به‌زودی'))
+                    value: 'B2', enabled: false, child: Text('B2 — به‌زودی'))
               ],
               onChanged: (v) {
                 if (v != null && v != level) changeLevel(v);
@@ -198,11 +207,11 @@ class _LessonsState extends State<LessonsPage> {
           child: FilledButton.icon(
               onPressed: w.isEmpty
                   ? null
-                  : () => addScope('کل کتاب Starten Wir $level', levelFilter: level),
+                  : () => addScope('کل کتاب Starten Wir $level',
+                      levelFilter: level),
               icon: const Icon(Icons.add_task),
               label: Text('افزودن کل کتاب به لایتنر ($level)'))),
-      const Header('درس‌ها',
-          subtitle: 'درس را انتخاب کن و یادگیری را شروع کن'),
+      const Header('درس‌ها', subtitle: 'درس را انتخاب کن و یادگیری را شروع کن'),
       if (lessons.isEmpty)
         const Padding(
             padding: EdgeInsets.all(20),
