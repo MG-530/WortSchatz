@@ -75,14 +75,27 @@ class _ReviewSessionState extends State<ReviewSession> {
                                       children: [
                                 FittedBox(
                                     fit: BoxFit.scaleDown,
-                                    child: Text(w.display,
+                                    // Question side: bare word, no article,
+                                    // single neutral color (no gender hint).
+                                    // The answer side below is unchanged.
+                                    child: Text(w.german,
                                         textDirection: ui.TextDirection.ltr,
-                                        style: TextStyle(
+                                        style: const TextStyle(
                                             fontSize: 46,
-                                            fontWeight: FontWeight.bold,
-                                            color: wordColor(w)))),
+                                            fontWeight: FontWeight.bold))),
                                 if (show) ...[
                                   const SizedBox(height: 20),
+                                  // Answer side: full form WITH article in
+                                  // gender color (front stays bare/neutral).
+                                  FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(w.display,
+                                          textDirection: ui.TextDirection.ltr,
+                                          style: TextStyle(
+                                              fontSize: 26,
+                                              fontWeight: FontWeight.bold,
+                                              color: wordColor(w)))),
+                                  const SizedBox(height: 8),
                                   Text(w.persian,
                                       style: const TextStyle(
                                           fontSize: 22,
@@ -90,14 +103,34 @@ class _ReviewSessionState extends State<ReviewSession> {
                                   Text(w.english)
                                 ]
                               ])))))),
-              if (!show)
-                FilledButton(
-                    onPressed: () => _handleAnswer(false),
-                    child: const Text('بلد نبودم')),
-                  FilledButton(
-                      onPressed: () => _handleAnswer(true),
-                      child: const Text('بلد بودم'))
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                    child: OutlinedButton.icon(
+                        // Back never grades — it only revisits the
+                        // previous card. Meaningless for 1-word sessions.
+                        onPressed: widget.words.length <= 1 ? null : _goBack,
+                        icon: const Icon(Icons.arrow_back),
+                        label: const Text('قبلی')))
+              ]),
+              // Both grade buttons are always visible — including on
+              // the answer side — so "didn't know" is one tap away.
+              FilledButton(
+                  onPressed: () => _handleAnswer(false),
+                  child: const Text('بلد نبودم')),
+              FilledButton(
+                  onPressed: () => _handleAnswer(true),
+                  child: const Text('بلد بودم'))
             ])));
+  }
+
+  /// Go to the previous card without grading it.
+  void _goBack() {
+    if (widget.words.isEmpty) return;
+    setState(() {
+      i = (i - 1 + widget.words.length) % widget.words.length;
+      show = false;
+    });
   }
 
   void _handleAnswer(bool known) {
@@ -120,12 +153,12 @@ class _ReviewSessionState extends State<ReviewSession> {
     await StreakService.recordStudySession(wordsStudied: _answered);
     if (widget.extra.isNotEmpty && mounted) {
       final go = await showDialog<bool>(
-          context: context,
-          builder: (d) => AlertDialog(
-                  title: const Text('مرور آمده تمام شد'),
-                  content: const Text(
-                      'واژه‌های آماده‌نشده را هم مرور می‌کنی؟ در این حالت باکس‌ها تغییر نمی‌شود.')),
-          );
+        context: context,
+        builder: (d) => AlertDialog(
+            title: const Text('مرور آمده تمام شد'),
+            content: const Text(
+                'واژه‌های آماده‌نشده را هم مرور می‌کنی؟ در این حالت باکس‌ها تغییر نمی‌شود.')),
+      );
       if (go == true && mounted) {
         Navigator.pushReplacement(
             context,

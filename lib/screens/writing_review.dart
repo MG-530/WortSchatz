@@ -22,7 +22,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
   bool hint = false, checked = false, correct = false;
   final input = TextEditingController();
   final tts = FlutterTts();
-  late List<String> letters;
+  List<String> letters = [];
 
   /// Graded answers in this session + whether the streak was recorded
   /// at natural finish (avoids double counting on pop).
@@ -34,7 +34,9 @@ class _WritingReviewState extends State<WritingReviewSession> {
   @override
   void initState() {
     super.initState();
-    lettersForWord();
+    // Guarded: an empty word list must show the empty-state message in
+    // build() instead of crashing here on words[0].
+    if (widget.words.isNotEmpty) lettersForWord();
   }
 
   @override
