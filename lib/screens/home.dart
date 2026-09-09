@@ -18,13 +18,15 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   int tab = 0;
-  int _dashSeed = 0;
-  // Dashboard is rebuilt (fresh key) whenever we return to it so a level
-  // change in Settings/Lessons is reflected immediately.
+  int _dashSeed = 0, _lessSeed = 0, _revSeed = 0;
+  // Tabs are rebuilt (fresh key) whenever selected, so DB changes made
+  // elsewhere (add/reset/grading in another tab or Settings) are always
+  // visible — no stale box counts. WordsPage keeps its state to preserve
+  // the search query (it shows no box data).
   List<Widget> get pages => [
         Dashboard(key: ValueKey('dash$_dashSeed')),
-        const LessonsPage(),
-        const ReviewPage(),
+        LessonsPage(key: ValueKey('les$_lessSeed')),
+        ReviewPage(key: ValueKey('rev$_revSeed')),
         const WordsPage()
       ];
 
@@ -36,25 +38,29 @@ class _HomeState extends State<Home> {
   Future<void> _openSettings(BuildContext c) async {
     await Navigator.push(
         c, MaterialPageRoute(builder: (_) => const SettingsPage()));
-    setState(() => _dashSeed++);
+    setState(() {
+      _dashSeed++;
+      _lessSeed++;
+      _revSeed++;
+    });
   }
 
   @override
   Widget build(BuildContext c) => Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
-          appBar: AppBar(
-              title: const Text('Starten Wir A1'),
-              actions: [
-                IconButton(
-                    icon: const Icon(Icons.settings),
-                    onPressed: () => _openSettings(c))
-              ]),
+          appBar: AppBar(title: const Text('Starten Wir A1'), actions: [
+            IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () => _openSettings(c))
+          ]),
           body: pages[tab],
           bottomNavigationBar: NavigationBar(
               selectedIndex: tab,
               onDestinationSelected: (i) => setState(() {
                     if (i == 0) _dashSeed++;
+                    if (i == 1) _lessSeed++;
+                    if (i == 2) _revSeed++;
                     tab = i;
                   }),
               destinations: const [
@@ -129,36 +135,36 @@ class _DashboardState extends State<Dashboard> {
                           label: Text('سطح فعال: $level'),
                           visualDensity: VisualDensity.compact),
                     ])),
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: StreakChart(
-                      currentStreak: currentStreak,
-                      longestStreak: longestStreak,
-                      days: streakDays)),
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Card(
-                      color: const Color(0xfff0ecff),
-                      child: const Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Text(
-                              'یک درس انتخاب کن، واژه‌ها را یاد بگیر و با تمرین و لایتنر تثبیت کن.',
-                              style: TextStyle(fontSize: 17))))),
-              Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      children: [
-                        StatCard('کل واژه‌ها', '${s['total'] ?? 0}',
-                            Icons.library_books),
-                        StatCard('یادگرفته‌شده', '${s['learned'] ?? 0}',
-                             Icons.check_circle),
-                        StatCard('جدید', '${s['fresh'] ?? 0}', Icons.fiber_new),
-                        StatCard('آماده مرور', '${s['due'] ?? 0}', Icons.today)
-                      ])),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: StreakChart(
+                    currentStreak: currentStreak,
+                    longestStreak: longestStreak,
+                    days: streakDays)),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Card(
+                    color: const Color(0xfff0ecff),
+                    child: const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text(
+                            'یک درس انتخاب کن، واژه‌ها را یاد بگیر و با تمرین و لایتنر تثبیت کن.',
+                            style: TextStyle(fontSize: 17))))),
+            Padding(
+                padding: const EdgeInsets.all(20),
+                child: GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    children: [
+                      StatCard('کل واژه‌ها', '${s['total'] ?? 0}',
+                          Icons.library_books),
+                      StatCard('یادگرفته‌شده', '${s['learned'] ?? 0}',
+                          Icons.check_circle),
+                      StatCard('جدید', '${s['fresh'] ?? 0}', Icons.fiber_new),
+                      StatCard('آماده مرور', '${s['due'] ?? 0}', Icons.today)
+                    ])),
           ])));
 }

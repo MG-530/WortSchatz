@@ -182,18 +182,24 @@ class _LessonsState extends State<LessonsPage> {
                   IconButton(
                       tooltip: 'افزودن به لایتنر',
                       icon: const Icon(Icons.add_task),
-                      onPressed: () => addScope('درس $code', lesson: l, levelFilter: level)),
-                  CircleAvatar(child: Text(code, style: const TextStyle(fontSize: 12)))
+                      onPressed: () =>
+                          addScope('درس $code', lesson: l, levelFilter: level)),
+                  CircleAvatar(
+                      child: Text(code, style: const TextStyle(fontSize: 12)))
                 ]),
                 onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => LearnSession(
-                            words: w
-                                .where((x) =>
-                                    x.lessons.contains(l) && x.level == level)
-                                .toList(),
-                            title: 'درس $code'))))));
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => LearnSession(
+                                words: w
+                                    .where((x) =>
+                                        x.lessons.contains(l) &&
+                                        x.level == level)
+                                    .toList(),
+                                title: 'درس $code'))).then((_) {
+                      // Grading inside the session may have changed boxes.
+                      if (mounted) load();
+                    }))));
   }
 
   @override
