@@ -87,14 +87,24 @@ class VocabularyDb {
           }
         }
       } else {
-        // Same word count: only backfill metadata (level + normalized
-        // lessons). NEVER touch box / next_review here — resetting them
-        // would wipe the user's Leitner progress on every app start.
+        // Same word count: only backfill metadata (level, normalized
+        // lessons, and b-amooz-checked word_type/article/gender/display).
+        // NEVER touch box / next_review here — resetting them would wipe
+        // the user's Leitner progress on every app start.
         // This also migrates old DBs storing A2 lessons as 101..112.
         for (var i = 0; i < words.length; i++) {
-          await _db!.update('words',
-              {'level': words[i]['level'], 'lessons': words[i]['lessons']},
-              where: 'id = ?', whereArgs: [words[i]['id']]);
+          await _db!.update(
+              'words',
+              {
+                'level': words[i]['level'],
+                'lessons': words[i]['lessons'],
+                'word_type': words[i]['word_type'],
+                'article': words[i]['article'],
+                'gender': words[i]['gender'],
+                'display': words[i]['display'],
+              },
+              where: 'id = ?',
+              whereArgs: [words[i]['id']]);
         }
       }
     } catch (e, st) {
@@ -105,15 +115,87 @@ class VocabularyDb {
       debugPrint('VocabularyDb seed failed: $e\n$st');
       try {
         for (var i = 0; i < words.length; i++) {
-          await _db!.update('words',
-              {'level': words[i]['level'], 'lessons': words[i]['lessons']},
-              where: 'id = ?', whereArgs: [words[i]['id']]);
+          await _db!.update(
+              'words',
+              {
+                'level': words[i]['level'],
+                'lessons': words[i]['lessons'],
+                'word_type': words[i]['word_type'],
+                'article': words[i]['article'],
+                'gender': words[i]['gender'],
+                'display': words[i]['display'],
+              },
+              where: 'id = ?',
+              whereArgs: [words[i]['id']]);
         }
       } catch (e2, st2) {
         debugPrint('VocabularyDb fallback seed failed: $e2\n$st2');
         rethrow;
       }
     }
+    await _ensureConjugations();
+  }
+
+  /// Verb conjugation tables (seeded from assets, no user data inside so a
+  /// reseed-if-empty is always safe). Works on pre-existing databases too
+  /// — no schema version bump needed for the words table.
+  Future<void> _ensureConjugations() async {
+    await _db!.execute(
+        'CREATE TABLE IF NOT EXISTS conjugations(verb TEXT PRIMARY KEY, url TEXT, data TEXT)');
+    await _db!.execute(
+        'CREATE TABLE IF NOT EXISTS conj_aliases(word TEXT PRIMARY KEY, verb TEXT)');
+    final count = Sqflite.firstIntValue(
+            await _db!.rawQuery('SELECT COUNT(*) FROM conjugations')) ??
+        0;
+    if (count > 0) return;
+    final cmap =
+        jsonDecode(await rootBundle.loadString('assets/conjugations.json'))
+            as Map<String, dynamic>;
+    final batch = _db!.batch();
+    cmap.forEach((verb, v) {
+      if (verb == '_aliases') return;
+      final m = v as Map<String, dynamic>;
+      batch.insert('conjugations', {
+        'verb': verb,
+        'url': m['url'] ?? '',
+        'data': jsonEncode(m['moods'] ?? []),
+      });
+    });
+    final aliases = cmap['_aliases'] as Map<String, dynamic>? ?? {};
+    aliases.forEach((word, verb) {
+      batch.insert('conj_aliases', {'word': word, 'verb': verb as String});
+    });
+    await batch.commit(noResult: true);
+  }
+
+  /// Conjugation tables for a German word, or null when the word has none.
+  /// Resolution: exact verb → alias (e.g. ist → sein) → lowercase fallback.
+  /// Returns {'verb', 'url', 'moods'} where moods is a decoded List.
+  Future<Map<String, dynamic>?> conjugationFor(String german) async {
+    Future<Map<String, Object?>?> one(String sql, List<Object?> args) async {
+      final r = await _db!.rawQuery(sql, args);
+      return r.isEmpty ? null : r.first;
+    }
+
+    var row = await one('SELECT * FROM conjugations WHERE verb = ?', [german]);
+    if (row == null) {
+      final a =
+          await one('SELECT verb FROM conj_aliases WHERE word = ?', [german]);
+      if (a != null) {
+        row =
+            await one('SELECT * FROM conjugations WHERE verb = ?', [a['verb']]);
+      }
+    }
+    if (row == null && german != german.toLowerCase()) {
+      row = await one(
+          'SELECT * FROM conjugations WHERE verb = ?', [german.toLowerCase()]);
+    }
+    if (row == null) return null;
+    return {
+      'verb': row['verb'] as String? ?? german,
+      'url': row['url'] as String? ?? '',
+      'moods': jsonDecode(row['data'] as String? ?? '[]'),
+    };
   }
 
   Future<void> init_merged() => init();
