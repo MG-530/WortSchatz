@@ -4,7 +4,6 @@ import '../models/word.dart';
 import '../helpers/colors.dart';
 import '../helpers/labels.dart';
 import '../services/audio_service.dart';
-import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import '../services/streak_service.dart';
 
@@ -20,10 +19,10 @@ class _LearnState extends State<LearnSession> {
   int index = 0;
   bool revealed = false, auto = true, online = false;
 
-  /// Number of cards the user actually graded in this session.
-  /// The streak is recorded on leave ONLY when this reaches a meaningful
-  /// threshold — briefly opening a lesson never counts.
-  int _graded = 0;
+  /// Distinct cards the user actually viewed in this session.
+  /// Study-only page: no grading here. Leaving counts toward the streak
+  /// only when real studying happened (not a brief open-and-close).
+  final Set<int> _seen = {0};
 
   @override
   void initState() {
@@ -44,14 +43,18 @@ class _LearnState extends State<LearnSession> {
     setState(() {
       index = (index + delta + widget.words.length) % widget.words.length;
       revealed = false;
+      _seen.add(index);
     });
     if (auto) playWord(widget.words[index], online: online);
   }
 
   @override
   void dispose() {
-    if (_graded >= StreakService.minAnswersForStreak) {
-      StreakService.recordStudySession(wordsStudied: _graded);
+    // Study effort (distinct cards viewed), not grading, feeds the streak.
+    if (widget.words.isNotEmpty &&
+        _seen.length >=
+            StreakService.minAnswersForStreak.clamp(1, widget.words.length)) {
+      StreakService.recordStudySession(wordsStudied: _seen.length);
     }
     super.dispose();
   }
@@ -86,8 +89,8 @@ class _LearnState extends State<LearnSession> {
                                       children: [
                                         Chip(
                                             label: Text(typeLabel(w)),
-                                            backgroundColor:
-                                                wordColor(w).withValues(alpha: .14)),
+                                            backgroundColor: wordColor(w)
+                                                .withValues(alpha: .14)),
                                         const SizedBox(height: 20),
                                         FittedBox(
                                             fit: BoxFit.scaleDown,
@@ -121,21 +124,9 @@ class _LearnState extends State<LearnSession> {
                     onPressed: () => playWord(w, online: online),
                     icon: const Icon(Icons.volume_up)),
                 FilledButton.icon(
-                    onPressed: () {
-                      VocabularyDb.instance.grade(w, true);
-                      _graded++;
-                      move(1);
-                    },
-                    icon: const Icon(Icons.check),
-                    label: const Text('بلد')),
-                FilledButton.icon(
-                    onPressed: () {
-                      VocabularyDb.instance.grade(w, false);
-                      _graded++;
-                      move(1);
-                    },
-                    icon: const Icon(Icons.close),
-                    label: const Text('بلد نبودم'))
+                    onPressed: () => move(1),
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('بعدی'))
               ])
             ])));
   }
