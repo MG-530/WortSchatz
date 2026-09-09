@@ -80,6 +80,18 @@ class _WordsState extends State<WordsPage> {
                               fontSize: 18, fontWeight: FontWeight.bold)),
                       Text(x.english,
                           style: const TextStyle(color: Colors.grey)),
+                      FutureBuilder<String?>(
+                          future: VocabularyDb.instance.pluralFor(x.german),
+                          builder: (c, snap) {
+                            if (snap.connectionState != ConnectionState.done ||
+                                snap.data == null) {
+                              return const SizedBox.shrink();
+                            }
+                            return Text('جمع: ${snap.data}',
+                                textDirection: ui.TextDirection.ltr,
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 13));
+                          }),
                       if (x.pronunciation.isNotEmpty)
                         Text('/${x.pronunciation}/',
                             textDirection: ui.TextDirection.ltr,

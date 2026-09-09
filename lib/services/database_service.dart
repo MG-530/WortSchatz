@@ -134,6 +134,41 @@ class VocabularyDb {
       }
     }
     await _ensureConjugations();
+    await _ensurePlurals();
+  }
+
+  /// Noun plurals (seeded from assets, static data — reseed-if-empty is
+  /// always safe). Same pattern as conjugations: works on old DBs too.
+  Future<void> _ensurePlurals() async {
+    await _db!.execute(
+        'CREATE TABLE IF NOT EXISTS plurals(german TEXT PRIMARY KEY, plural TEXT)');
+    final count = Sqflite.firstIntValue(
+            await _db!.rawQuery('SELECT COUNT(*) FROM plurals')) ??
+        0;
+    if (count > 0) return;
+    final pmap = jsonDecode(await rootBundle.loadString('assets/plurals.json'));
+    final batch = _db!.batch();
+    (pmap as Map<String, dynamic>).forEach((german, plural) {
+      batch.insert('plurals', {'german': german, 'plural': plural as String});
+    });
+    await batch.commit(noResult: true);
+  }
+
+  /// Plural form of a noun, or null when unknown.
+  Future<String?> pluralFor(String german) async {
+    final r = await _db!
+        .rawQuery('SELECT plural FROM plurals WHERE german = ?', [german]);
+    if (r.isEmpty) return null;
+    return r.first['plural'] as String?;
+  }
+
+  /// Batch plural lookup for a session's word list (one query).
+  Future<Map<String, String>> pluralsFor(List<String> germans) async {
+    if (germans.isEmpty) return {};
+    final ph = List.filled(germans.length, '?').join(',');
+    final rows = await _db!.rawQuery(
+        'SELECT german, plural FROM plurals WHERE german IN ($ph)', germans);
+    return {for (final r in rows) r['german'] as String: r['plural'] as String};
   }
 
   /// Verb conjugation tables (seeded from assets, no user data inside so a
