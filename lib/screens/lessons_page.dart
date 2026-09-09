@@ -4,6 +4,8 @@ import '../widgets/header.dart';
 import '../services/database_service.dart';
 import '../models/word.dart';
 import 'learn_session.dart';
+import 'practice_page.dart';
+import 'article_quiz.dart';
 
 class LessonsPage extends StatefulWidget {
   const LessonsPage({super.key});
@@ -184,6 +186,14 @@ class _LessonsState extends State<LessonsPage> {
                       icon: const Icon(Icons.add_task),
                       onPressed: () =>
                           addScope('درس $code', lesson: l, levelFilter: level)),
+                  IconButton(
+                      tooltip: 'کوئیز آرتیکل این درس',
+                      icon: const Icon(Icons.quiz_outlined),
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  ArticleQuizPage(level: level, lesson: l)))),
                   CircleAvatar(
                       child: Text(code, style: const TextStyle(fontSize: 12)))
                 ]),
@@ -217,6 +227,31 @@ class _LessonsState extends State<LessonsPage> {
                       levelFilter: level),
               icon: const Icon(Icons.add_task),
               label: Text('افزودن کل کتاب به لایتنر ($level)'))),
+      Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(children: [
+            Expanded(
+                child: OutlinedButton.icon(
+                    onPressed: w.isEmpty
+                        ? null
+                        : () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => PracticePage(level: level))),
+                    icon: const Icon(Icons.keyboard),
+                    label: const Text('تمرین'))),
+            const SizedBox(width: 8),
+            Expanded(
+                child: OutlinedButton.icon(
+                    onPressed: w.isEmpty
+                        ? null
+                        : () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => ArticleQuizPage(level: level))),
+                    icon: const Icon(Icons.quiz_outlined),
+                    label: const Text('کوئیز آرتیکل')))
+          ])),
       const Header('درس‌ها', subtitle: 'درس را انتخاب کن و یادگیری را شروع کن'),
       if (lessons.isEmpty)
         const Padding(
