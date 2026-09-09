@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/home.dart';
 import 'services/database_service.dart';
+import 'services/notification_service.dart';
 
 class StartenWirApp extends StatelessWidget {
   const StartenWirApp({super.key});
@@ -54,6 +55,8 @@ class _SplashState extends State<SplashScreen> {
     setState(() => error = null);
     try {
       await VocabularyDb.instance.init();
+      await NotifyService.init();
+      await NotifyService.scheduleDailyReminder();
     } catch (e) {
       debugPrint('DB init failed: $e');
       if (mounted) setState(() => error = e.toString());

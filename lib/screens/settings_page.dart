@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/header.dart';
 import '../services/database_service.dart';
+import '../services/notification_service.dart';
 import '../services/settings_service.dart';
 import '../services/streak_service.dart';
 
@@ -62,6 +63,7 @@ class _SettingsState extends State<SettingsPage> {
       time =
           '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
       await textSet('reminder', time);
+      await NotifyService.scheduleDailyReminder();
     }
   }
 
