@@ -9,10 +9,15 @@ class ReviewSession extends StatefulWidget {
   final List<Word> words;
   final String title;
   final List<Word> extra;
+
+  /// When true, the question side shows Persian (recall German) instead
+  /// of German (recall meaning). Grading and streak logic are unchanged.
+  final bool reverseMode;
   const ReviewSession(
       {required this.words,
       required this.title,
       this.extra = const [],
+      this.reverseMode = false,
       super.key});
   @override
   State<ReviewSession> createState() => _ReviewSessionState();
@@ -28,10 +33,18 @@ class _ReviewSessionState extends State<ReviewSession> {
   int _answered = 0;
   bool _streakRecorded = false;
 
+  /// Plural forms for this session's nouns (one batch query).
+  Map<String, String> plurals = {};
+
   @override
   void initState() {
     super.initState();
     show = false;
+    VocabularyDb.instance
+        .pluralsFor(widget.words.map((w) => w.german).toList())
+        .then((m) {
+      if (mounted) setState(() => plurals = m);
+    });
   }
 
   @override
@@ -73,20 +86,30 @@ class _ReviewSessionState extends State<ReviewSession> {
                                   child: Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    // Question side: bare word, no article,
-                                    // single neutral color (no gender hint).
-                                    // The answer side below is unchanged.
-                                    child: Text(w.german,
-                                        textDirection: ui.TextDirection.ltr,
-                                        style: const TextStyle(
-                                            fontSize: 46,
-                                            fontWeight: FontWeight.bold))),
+                                if (!widget.reverseMode)
+                                  FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      // Question side: bare word, no article,
+                                      // single neutral color (no gender hint).
+                                      child: Text(w.german,
+                                          textDirection: ui.TextDirection.ltr,
+                                          style: const TextStyle(
+                                              fontSize: 46,
+                                              fontWeight: FontWeight.bold)))
+                                else ...[
+                                  Text(w.persian,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 6),
+                                  Text(w.english,
+                                      style: const TextStyle(
+                                          fontSize: 16, color: Colors.grey))
+                                ],
                                 if (show) ...[
                                   const SizedBox(height: 20),
-                                  // Answer side: full form WITH article in
-                                  // gender color (front stays bare/neutral).
+                                  // Answer side: full form WITH article in gender color.
                                   FittedBox(
                                       fit: BoxFit.scaleDown,
                                       child: Text(w.display,
@@ -96,10 +119,16 @@ class _ReviewSessionState extends State<ReviewSession> {
                                               fontWeight: FontWeight.bold,
                                               color: wordColor(w)))),
                                   const SizedBox(height: 8),
-                                  Text(w.persian,
-                                      style: const TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold)),
+                                  if (plurals[w.german] != null)
+                                    Text('جمع: ${plurals[w.german]}',
+                                        textDirection: ui.TextDirection.ltr,
+                                        style: const TextStyle(
+                                            fontSize: 14, color: Colors.grey)),
+                                  if (!widget.reverseMode)
+                                    Text(w.persian,
+                                        style: const TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold)),
                                   Text(w.english)
                                 ]
                               ])))))),

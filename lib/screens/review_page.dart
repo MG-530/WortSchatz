@@ -103,43 +103,53 @@ class _ReviewState extends State<ReviewPage> {
           const SnackBar(content: Text('واژه‌ای آماده مرور نیست')));
       return;
     }
+    var reverseMode = false;
     showModalBottomSheet(
         context: context,
-        builder: (sheet) => SafeArea(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(_sheetTitle(b),
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold))),
-              if (b < 0 && dueEnrolledCount > readyWords.length)
-                Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                        '$dueEnrolledCount واژه آماده است؛ این نوبت ${readyWords.length} تای اول مرور می‌شود',
-                        style:
-                            const TextStyle(fontSize: 13, color: Colors.grey))),
-              ListTile(
-                  leading: const Icon(Icons.style),
-                  title: const Text('مرور عادی'),
-                  subtitle: Text('${readyWords.length} واژه آماده مرور'),
-                  onTap: () {
-                    Navigator.pop(sheet);
-                    _open(ReviewSession(
-                        words: readyWords,
-                        title: _sessionTitle(b),
-                        extra: later));
-                  }),
-              ListTile(
-                  leading: const Icon(Icons.keyboard),
-                  title: const Text('مرور نوشتاری'),
-                  subtitle: Text('${readyWords.length} واژه آماده نوشتاری'),
-                  onTap: () {
-                    Navigator.pop(sheet);
-                    _open(WritingReviewSession(
-                        words: readyWords, title: _writingTitle(b)));
-                  })
-            ])));
+        builder: (sheet) => StatefulBuilder(
+            builder: (c, setSheet) => SafeArea(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(_sheetTitle(b),
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold))),
+                  if (b < 0 && dueEnrolledCount > readyWords.length)
+                    Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                            '$dueEnrolledCount واژه آماده است؛ این نوبت ${readyWords.length} تای اول مرور می‌شود',
+                            style: const TextStyle(
+                                fontSize: 13, color: Colors.grey))),
+                  SwitchListTile(
+                      title: const Text('جهت معکوس (فارسی ← آلمانی)'),
+                      subtitle: const Text('سؤال فارسی، جواب آلمانی'),
+                      value: reverseMode,
+                      onChanged: (v) => setSheet(() => reverseMode = v)),
+                  ListTile(
+                      leading: const Icon(Icons.style),
+                      title: const Text('مرور عادی'),
+                      subtitle: Text('${readyWords.length} واژه آماده مرور'),
+                      onTap: () {
+                        Navigator.pop(sheet);
+                        _open(ReviewSession(
+                            words: readyWords,
+                            title: reverseMode
+                                ? '${_sessionTitle(b)} (معکوس)'
+                                : _sessionTitle(b),
+                            extra: later,
+                            reverseMode: reverseMode));
+                      }),
+                  ListTile(
+                      leading: const Icon(Icons.keyboard),
+                      title: const Text('مرور نوشتاری'),
+                      subtitle: Text('${readyWords.length} واژه آماده نوشتاری'),
+                      onTap: () {
+                        Navigator.pop(sheet);
+                        _open(WritingReviewSession(
+                            words: readyWords, title: _writingTitle(b)));
+                      })
+                ]))));
   }
 
   @override
