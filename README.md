@@ -1,38 +1,101 @@
-# Starten Wir A1 Vocabulary Trainer
+# WortSchatz
 
-این پروژه یک اپ Flutter آفلاین برای یادگیری واژگان آلمانی کتاب **Starten Wir A1** است. رابط کاربری فارسی و راست‌به‌چپ است و واژه‌ها به‌صورت تکی، فهرست کامل و مرور لایتنر نمایش داده می‌شوند.
+A Persian-first German vocabulary trainer built with Flutter, based on the
+*Starten Wir* A1/A2 coursebooks. Learn words lesson by lesson, lock them in
+with a Leitner spaced-repetition system, and keep a daily study streak.
 
-## قابلیت‌ها
+## Features
 
-دیتابیس SQLite در اولین اجرای برنامه از فایل `assets/vocab.json` مقداردهی می‌شود. هر واژه شامل عبارت آلمانی، آرتیکل، معنی فارسی، معنی انگلیسی، تلفظ IPA در صورت موجود بودن، نوع واژه، جنسیت دستوری، درس‌های مربوط و وضعیت جعبه لایتنر است. تلفظ صوتی با `flutter_tts` و زبان `de-DE` انجام می‌شود؛ بنابراین برای تلفظ، فایل صوتی جداگانه لازم نیست.
+- **Lessons (A1/A2)** — browse 12 lessons per level with book covers, add a
+  single lesson or the whole book to Leitner
+- **Leitner SRS** — boxes 0–5 with scheduled reviews (`0→1d→2d→4d→7d→14d`);
+  words enter only through explicit *add* actions, never implicitly
+- **Flashcards** — tap-to-reveal cards, German→Persian and reverse
+  (Persian→German) modes, swipe + back navigation, noun plurals on answers
+- **Article quiz** — multiple-choice `der/die/das` sessions per level or per
+  lesson, with animated verdicts
+- **Writing & translation practice** — listen-and-type, scrambled letters,
+  timed translation with auto-advance
+- **Verb conjugations** — 351 full tables (mood × tense × pronoun,
+  irregular forms highlighted), opened from any word
+- **Pronunciation** — offline TTS with an optional article toggle
+  (*der Apfel* vs *Apfel*), online voice fallback, autoplay in lessons
+- **Streak & daily goal** — study streak with 7-day chart, configurable
+  daily word goal with a progress ring
+- **Daily reminder** — local notification at your chosen time showing the
+  due-word count (Android/iOS)
+- **Backup & restore** — export/import Leitner progress as JSON
+- **Persian-first UI** — RTL layout, Vazirmatn font, `fa` locale with
+  English/German support
 
-صفحهٔ خانه آمار کل واژه‌ها، واژه‌های یادگرفته‌شده، واژه‌های جدید و مرورهای امروز را نشان می‌دهد. صفحهٔ یادگیری کارت‌ها را یکی‌یکی نمایش می‌دهد. صفحهٔ لایتنر پاسخ را مخفی می‌کند و پس از پاسخ، کارت را بر اساس نتیجه در یکی از جعبه‌ها قرار می‌دهد. فاصله‌های مرور به‌صورت ۰، ۱، ۲، ۴، ۷ و ۱۴ روز تنظیم شده‌اند. صفحهٔ واژه‌ها نیز جست‌وجوی آلمانی، فارسی و انگلیسی و پخش تلفظ دارد.
+## Data
 
-## اجرا
+Vocabulary is bundled as JSON assets, cross-checked against
+dic.b-amooz.com (2637 entries: corrected word types, articles, genders):
 
-ابتدا Flutter SDK را نصب کنید و سپس دستورات زیر را اجرا کنید:
+| Asset | Content |
+|---|---|
+| `assets/vocab_merged.json` | Words (german, article, gender, type, level, lessons, …) |
+| `assets/conjugations.json` | 351 verb tables + aliases |
+| `assets/plurals.json` | 906 noun plurals |
+
+On boot the database is seeded from these assets; existing installs get
+non-destructive metadata backfills (Leitner progress is never wiped).
+
+### Leitner box model
+
+| Box | Meaning |
+|---|---|
+| `-1` | Not in Leitner yet (fresh pool, invisible to review) |
+| `0` | Entry — added via *add to Leitner*, always due |
+| `1–5` | Scheduled progress |
+
+## Getting started
 
 ```bash
 flutter pub get
 flutter run
 ```
 
-برای ساخت نسخهٔ اندروید:
+Requirements: Flutter 3.x (see `pubspec.yaml`), Android/iOS/desktop via
+`sqflite` / `sqflite_common_ffi` (FFI is enabled on desktop only).
 
 ```bash
-flutter build apk --release
+flutter analyze   # lint (clean: no errors or warnings)
 ```
 
-این پوشه شامل کدهای `lib/main.dart`، فایل دادهٔ `assets/vocab.json` و `pubspec.yaml` است. در محیطی که `flutter create` اجرا شود، این فایل‌ها را در یک پروژهٔ استاندارد Flutter قرار دهید یا همین پوشه را به‌عنوان بدنهٔ پروژه استفاده کنید.
+## Project layout
 
-## داده و ادغام منابع
+```
+lib/
+  app.dart                 MaterialApp, locale, splash + boot
+  main.dart                zoned guard, error fallback, desktop FFI guard
+  models/word.dart          Word entity
+  services/
+    database_service.dart   SQLite: words, conjugations, plurals, Leitner grade()
+    streak_service.dart     streak counters + 7-day history
+    settings_service.dart   SharedPreferences accessors
+    audio_service.dart      TTS / online voice, article-aware
+    notification_service.dart  daily reminder scheduling
+  screens/
+    home.dart               bottom-nav shell + dashboard
+    lessons_page.dart       book, lessons, practice/quiz entries
+    learn_session.dart      study-only card pager
+    review_page.dart        Leitner boxes + session picker
+    review_session.dart     flashcards (normal/reverse)
+    writing_review.dart     typed answers from letter chips
+    practice_page.dart      translation + writing drills
+    article_quiz.dart       der/die/das quiz
+    conjugation_page.dart   verb tables
+    words_page.dart         searchable word list + detail sheet
+    settings_page.dart      level, audio, reminder, goal, backup, resets
+  widgets/                  header, stat cards, streak chart
+```
 
-دادهٔ اولیه از دو منبع تهیه شده است: فایل `memrise.txt` ارسالی کاربر و فهرست ۱۲ درس Starten Wir A1 در وب‌سایت بیاموز. پس از نرمال‌سازی و ادغام، ۱٬۷۱۱ مدخل یکتا ایجاد شده است. آرتیکل‌های موجود در فایل کاربر حفظ شده‌اند و برای واژه‌هایی که در منبع وب بدون آرتیکل آمده‌اند، آرتیکل خالی باقی می‌ماند تا از حدس نادرست جلوگیری شود.
+## Screenshots
 
-منبع وب در زمان استخراج: [فهرست Starten Wir A1](https://lang.b-amooz.com/de/vocabulary/categories/340/starten-wir-a1). صفحهٔ نمونه: [Lektion 1](https://lang.b-amooz.com/de/vocabulary/subcategories/3939/lektion-1). لطفاً پیش از انتشار عمومی، شرایط استفاده و مجوز محتوای منبع وب را بررسی کنید و در صورت نیاز اجازهٔ صاحب محتوا را بگیرید.
+_TODO: add screenshots (`fastlane/` or `screenshots/`)._
 
-در مواردی که منبع اصلی ترجمه یا IPA ارائه نکرده است، مقدار خالی در داده باقی می‌ماند و رابط کاربری آن را به‌صورت «در دست تکمیل» یا با TTS آلمانی مدیریت می‌کند. این تصمیم از درج ترجمهٔ حدسی به‌عنوان دادهٔ قطعی جلوگیری می‌کند.
+## License
 
-## رنگ‌بندی
-
-رنگ آبی برای مذکر، صورتی برای مونث، سبز برای خنثی، زرد برای جمع، بنفش برای فعل، نارنجی برای صفت و فیروزه‌ای برای عبارت استفاده شده است.
+_TODO: choose a license (e.g. MIT) and drop `LICENSE` here._
