@@ -17,6 +17,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsState extends State<SettingsPage> {
   bool auto = true, online = false, articleTts = true;
+  int goal = 10;
   String time = '20:00', level = 'A1', message = '';
 
   @override
@@ -32,6 +33,7 @@ class _SettingsState extends State<SettingsPage> {
       auto = p.getBool('autoPlay') ?? true;
       online = p.getBool('onlineAudio') ?? false;
       articleTts = p.getBool('articleTts') ?? true;
+      goal = p.getInt('dailyGoal') ?? 10;
       time = p.getString('reminder') ?? '20:00';
       level = p.getString('level') ?? 'A1';
     });
@@ -193,6 +195,31 @@ class _SettingsState extends State<SettingsPage> {
               subtitle: Text(time),
               trailing: const Icon(Icons.notifications_active),
               onTap: pick),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: DropdownButtonFormField<int>(
+                  value: goal,
+                  decoration:
+                      const InputDecoration(labelText: 'هدف روزانه (واژه)'),
+                  items: const [
+                    DropdownMenuItem(value: 5, child: Text('5 واژه')),
+                    DropdownMenuItem(value: 10, child: Text('10 واژه')),
+                    DropdownMenuItem(value: 15, child: Text('15 واژه')),
+                    DropdownMenuItem(value: 20, child: Text('20 واژه')),
+                    DropdownMenuItem(value: 30, child: Text('30 واژه')),
+                    DropdownMenuItem(value: 50, child: Text('50 واژه')),
+                  ],
+                  onChanged: (v) async {
+                    if (v != null) {
+                      await AppSettings.setInt('dailyGoal', v);
+                      if (mounted) {
+                        setState(() {
+                          goal = v;
+                          message = 'ذخیره شد';
+                        });
+                      }
+                    }
+                  })),
           const Header('پیشرفت و بکاپ'),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),

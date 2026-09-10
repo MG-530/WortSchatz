@@ -92,6 +92,8 @@ class Dashboard extends StatefulWidget {
 class _DashboardState extends State<Dashboard> {
   Map<String, int> s = {};
   String level = 'A1';
+  int goal = 10;
+  int todayCount = 0;
   int currentStreak = 0;
   int longestStreak = 0;
   List<int> streakDays = [];
@@ -104,13 +106,18 @@ class _DashboardState extends State<Dashboard> {
 
   Future<void> load() async {
     level = await AppSettings.level;
+    goal = await AppSettings.dailyGoal;
     final x = await VocabularyDb.instance.stats(level: level);
     final sd = await StreakService.getStreak();
     streakDays = await StreakService.getLast7Days();
     currentStreak = sd.currentStreak;
     longestStreak = sd.longestStreak;
+    todayCount = streakDays.isNotEmpty ? streakDays.last : 0;
     if (mounted) setState(() => s = x);
   }
+
+  double get goalProgress =>
+      goal <= 0 ? 0 : (todayCount / goal).clamp(0.0, 1.0);
 
   @override
   Widget build(BuildContext c) => SafeArea(
@@ -141,6 +148,43 @@ class _DashboardState extends State<Dashboard> {
                     currentStreak: currentStreak,
                     longestStreak: longestStreak,
                     days: streakDays)),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Card(
+                    child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(children: [
+                          SizedBox(
+                              width: 56,
+                              height: 56,
+                              child:
+                                  Stack(alignment: Alignment.center, children: [
+                                CircularProgressIndicator(
+                                    value: goalProgress,
+                                    strokeWidth: 6,
+                                    backgroundColor: Colors.grey.shade300),
+                                Text('$todayCount',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                              ])),
+                          const SizedBox(width: 16),
+                          Expanded(
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                const Text('هدف امروز',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold)),
+                                Text('$todayCount از $goal واژه',
+                                    style: const TextStyle(color: Colors.grey)),
+                                if (todayCount >= goal)
+                                  const Text('تبریک! هدف امروز کامل شد',
+                                      style: TextStyle(
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.bold))
+                              ]))
+                        ])))),
             Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Card(
