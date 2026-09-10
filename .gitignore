@@ -46,3 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Sentry native crash reports (local only)
+.sentry-native/
