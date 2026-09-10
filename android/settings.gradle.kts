@@ -11,15 +11,9 @@ pluginManagement {
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
     repositories {
-        maven {
-            url = uri("https://mirror-maven.runflare.com/gradle-plugins/")
-        }
-        maven {
-            url = uri("https://mirror-maven.runflare.com/maven2/")
-        }
-        maven {
-            url = uri("https://mirror-maven.runflare.com/android/maven2/")
-        }
+        google()
+        mavenCentral()
+        gradlePluginPortal()
     }
 }
 
@@ -27,17 +21,12 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
     repositories {
-        maven {
-            url = uri("https://mirror-maven.runflare.com/maven2/")
-        }
-        maven {
-            url = uri("https://mirror-maven.runflare.com/android/maven2/")
-        }
+        google()
+        mavenCentral()
     }
 }
 
 rootProject.name = "android"
-=
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.1.0" apply false
