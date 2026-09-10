@@ -49,7 +49,7 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext c) => Directionality(
       textDirection: ui.TextDirection.rtl,
       child: Scaffold(
-          appBar: AppBar(title: const Text('Starten Wir A1'), actions: [
+          appBar: AppBar(title: const Text('WortSchatz'), actions: [
             IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () => _openSettings(c))
@@ -129,7 +129,7 @@ class _DashboardState extends State<Dashboard> {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Starten Wir A1',
+                      Text('WortSchatz',
                           style: Theme.of(c)
                               .textTheme
                               .headlineMedium

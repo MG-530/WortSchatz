@@ -1,4 +1,4 @@
-package com.example.starten_wir_a1
+package com.wortschatz.app
 
 import io.flutter.embedding.android.FlutterActivity
 

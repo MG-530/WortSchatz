@@ -11,7 +11,7 @@ class StartenWirApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Starten Wir',
+        title: 'WortSchatz',
         locale: const Locale('fa'),
         supportedLocales: const [
           Locale('fa'),
@@ -76,41 +76,35 @@ class _SplashState extends State<SplashScreen> {
               child: Padding(
                   padding: const EdgeInsets.all(32),
                   child: error == null
-                      ? const Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                              Icon(Icons.menu_book,
-                                  size: 72, color: Color(0xff102a43)),
-                              SizedBox(height: 16),
-                              Text('Starten Wir',
-                                  style: TextStyle(
-                                      fontSize: 26,
-                                      fontWeight: FontWeight.w800)),
-                              SizedBox(height: 24),
-                              CircularProgressIndicator(),
-                              SizedBox(height: 16),
-                              Text('در حال آماده‌سازی واژه‌ها…',
-                                  style: TextStyle(color: Colors.grey))
-                            ])
-                      : Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                              const Icon(Icons.error_outline,
-                                  size: 72, color: Colors.red),
-                              const SizedBox(height: 16),
-                              const Text('خطا در آماده‌سازی دیتابیس',
-                                  style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 8),
-                              Text(error!,
-                                  textAlign: TextAlign.center,
-                                  style:
-                                      const TextStyle(color: Colors.grey)),
-                              const SizedBox(height: 24),
-                              FilledButton.icon(
-                                  onPressed: _boot,
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('تلاش مجدد'))
-                            ])))));
+                      ? Column(mainAxisSize: MainAxisSize.min, children: [
+                          Image.asset('assets/logo.png',
+                              width: 96, height: 96),
+                          const SizedBox(height: 16),
+                          const Text('WortSchatz',
+                              style: TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 24),
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 16),
+                          const Text('در حال آماده‌سازی واژه‌ها…',
+                              style: TextStyle(color: Colors.grey))
+                        ])
+                      : Column(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.error_outline,
+                              size: 72, color: Colors.red),
+                          const SizedBox(height: 16),
+                          const Text('خطا در آماده‌سازی دیتابیس',
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Text(error!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 24),
+                          FilledButton.icon(
+                              onPressed: _boot,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('تلاش مجدد'))
+                        ])))));
 }

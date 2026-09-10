@@ -30,6 +30,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
@@ -39,5 +40,13 @@ flutter:
     - assets/vocab_merged.json
     - assets/conjugations.json
     - assets/plurals.json
+    - assets/logo.png
     - assets/starten_wir_a1_cover.jpg
     - assets/starten_wir_a2_cover.jpg
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  adaptive_icon_background: "#102A43"
+  adaptive_icon_foreground: "assets/icon_foreground.png"
