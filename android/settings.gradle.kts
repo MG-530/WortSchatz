@@ -17,17 +17,6 @@ pluginManagement {
     }
 }
 
-dependencyResolutionManagement {
-    // PREFER_SETTINGS (the Flutter default): the Flutter Gradle plugin is
-    // allowed to add its own engine repository; settings repos win.
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
-
 rootProject.name = "android"
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
