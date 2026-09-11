@@ -18,7 +18,9 @@ pluginManagement {
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    // PREFER_SETTINGS (the Flutter default): the Flutter Gradle plugin is
+    // allowed to add its own engine repository; settings repos win.
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
 
     repositories {
         google()
