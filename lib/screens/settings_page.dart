@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,18 +72,18 @@ class _SettingsState extends State<SettingsPage> {
 
   Future<void> backup() async {
     try {
-      final path = await FilePicker.platform.saveFile(
+      final rows = await VocabularyDb.instance.backupRows();
+      final uri = await FilePicker.saveFile(
           fileName: 'starten_wir_a1_backup.json',
+          bytes: Uint8List.fromList(utf8.encode(jsonEncode({
+            'format': 'starten-wir-a1-progress-v1',
+            'createdAt': DateTime.now().toIso8601String(),
+            'level': level,
+            'words': rows
+          }))),
           type: FileType.custom,
           allowedExtensions: ['json']);
-      if (path == null) return;
-      final rows = await VocabularyDb.instance.backupRows();
-      await File(path).writeAsString(jsonEncode({
-        'format': 'starten-wir-a1-progress-v1',
-        'createdAt': DateTime.now().toIso8601String(),
-        'level': level,
-        'words': rows
-      }));
+      if (uri == null) return;
       setState(() => message = 'بکاپ ذخیره شد');
     } catch (e) {
       setState(() => message = 'بکاپ با مشکل مواجه شد: $e');
@@ -91,11 +92,11 @@ class _SettingsState extends State<SettingsPage> {
 
   Future<void> restore() async {
     try {
-      final result = await FilePicker.platform
-          .pickFiles(type: FileType.custom, allowedExtensions: ['json']);
-      if (result == null || result.files.single.path == null) return;
+      final files = await FilePicker.pickFiles(
+          type: FileType.custom, allowedExtensions: ['json']);
+      if (files.isEmpty || files.single.path == null) return;
       final data =
-          jsonDecode(await File(result.files.single.path!).readAsString());
+          jsonDecode(await File(files.single.path!).readAsString());
       await VocabularyDb.instance.restoreRows(data['words'] as List);
       setState(() => message = 'بازیابی پیشرفت انجام شد');
     } catch (e) {
