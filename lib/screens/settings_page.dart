@@ -85,7 +85,7 @@ class _SettingsState extends State<SettingsPage> {
       }));
       setState(() => message = 'بکاپ ذخیره شد');
     } catch (e) {
-      setState(() => message = 'بکاپ با مشکل مواجه شد: ' + e.toString());
+      setState(() => message = 'بکاپ با مشکل مواجه شد: $e');
     }
   }
 
@@ -99,7 +99,7 @@ class _SettingsState extends State<SettingsPage> {
       await VocabularyDb.instance.restoreRows(data['words'] as List);
       setState(() => message = 'بازیابی پیشرفت انجام شد');
     } catch (e) {
-      setState(() => message = 'بازیابی با مشکل مواجه شد: ' + e.toString());
+      setState(() => message = 'بازیابی با مشکل مواجه شد: $e');
     }
   }
 
@@ -162,7 +162,8 @@ class _SettingsState extends State<SettingsPage> {
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: DropdownButtonFormField<String>(
-                  value: level,
+                  key: ValueKey('level-$level'),
+                  initialValue: level,
                   decoration: const InputDecoration(labelText: 'سطح'),
                   items: const [
                     DropdownMenuItem(value: 'A1', child: Text('A1')),
@@ -198,7 +199,8 @@ class _SettingsState extends State<SettingsPage> {
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: DropdownButtonFormField<int>(
-                  value: goal,
+                  key: ValueKey('goal-$goal'),
+                  initialValue: goal,
                   decoration:
                       const InputDecoration(labelText: 'هدف روزانه (واژه)'),
                   items: const [

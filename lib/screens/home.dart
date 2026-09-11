@@ -135,8 +135,8 @@ class _DashboardState extends State<Dashboard> {
                               .headlineMedium
                               ?.copyWith(fontWeight: FontWeight.w800)),
                       const SizedBox(height: 8),
-                      Text('یادگیری آلمانی با مرور هوشمند',
-                          style: const TextStyle(color: Colors.grey)),
+                      const Text('یادگیری آلمانی با مرور هوشمند',
+                          style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 4),
                       Chip(
                           label: Text('سطح فعال: $level'),
@@ -185,11 +185,11 @@ class _DashboardState extends State<Dashboard> {
                                           fontWeight: FontWeight.bold))
                               ]))
                         ])))),
-            Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+            const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Card(
-                    color: const Color(0xfff0ecff),
-                    child: const Padding(
+                    color: Color(0xfff0ecff),
+                    child: Padding(
                         padding: EdgeInsets.all(20),
                         child: Text(
                             'یک درس انتخاب کن، واژه‌ها را یاد بگیر و با تمرین و لایتنر تثبیت کن.',

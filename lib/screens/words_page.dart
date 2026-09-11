@@ -148,7 +148,7 @@ class _WordsState extends State<WordsPage> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
                   DropdownButtonFormField<String>(
-                    value: level,
+                    initialValue: level,
                     decoration: const InputDecoration(
                       labelText: 'سطح',
                       border: OutlineInputBorder(),
@@ -169,7 +169,7 @@ class _WordsState extends State<WordsPage> {
                     },
                   ),
                   DropdownButtonFormField<int>(
-                    value: lesson,
+                    initialValue: lesson,
                     decoration: const InputDecoration(
                       labelText: 'درس',
                       border: OutlineInputBorder(),
@@ -190,7 +190,7 @@ class _WordsState extends State<WordsPage> {
                     },
                   ),
                   DropdownButtonFormField<String>(
-                    value: wordType,
+                    initialValue: wordType,
                     decoration: const InputDecoration(
                       labelText: 'نوع',
                       border: OutlineInputBorder(),
@@ -233,7 +233,7 @@ class _WordsState extends State<WordsPage> {
                                       style: const TextStyle(
                                           fontSize: 12, color: Colors.grey)),
                                   const Spacer(),
-                                  Text(x.persian + ' ' + x.english,
+                                  Text('${x.persian} ${x.english}',
                                       style: const TextStyle(
                                           fontSize: 12, color: Colors.grey)),
                                 ],

@@ -33,8 +33,9 @@ class _LearnState extends State<LearnSession> {
   Future<void> init() async {
     auto = await AppSettings.autoPlay;
     online = await AppSettings.onlineAudio;
-    if (auto && widget.words.isNotEmpty)
+    if (auto && widget.words.isNotEmpty) {
       playWord(widget.words[0], online: online);
+    }
     if (mounted) setState(() {});
   }
 
@@ -61,8 +62,9 @@ class _LearnState extends State<LearnSession> {
 
   @override
   Widget build(BuildContext c) {
-    if (widget.words.isEmpty)
+    if (widget.words.isEmpty) {
       return const Scaffold(body: Center(child: Text('این درس واژه‌ای ندارد')));
+    }
     final w = widget.words[index];
     return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
@@ -75,8 +77,9 @@ class _LearnState extends State<LearnSession> {
                   child: GestureDetector(
                       onTap: () => setState(() => revealed = !revealed),
                       onHorizontalDragEnd: (d) {
-                        if (d.primaryVelocity != null)
+                        if (d.primaryVelocity != null) {
                           move(d.primaryVelocity! > 0 ? -1 : 1);
+                        }
                       },
                       child: SizedBox(
                           width: double.infinity,

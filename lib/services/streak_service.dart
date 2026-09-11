@@ -88,7 +88,8 @@ class StreakService {
     await prefs.remove(_keyStreak);
     await prefs.remove(_keyLongestStreak);
     await prefs.remove(_keyLastStudyDate);
-    for (final k in prefs.getKeys().where((k) => k.startsWith(_keyDailyCount))) {
+    for (final k
+        in prefs.getKeys().where((k) => k.startsWith(_keyDailyCount))) {
       await prefs.remove(k);
     }
   }

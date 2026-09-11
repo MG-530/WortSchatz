@@ -77,13 +77,11 @@ class _SplashState extends State<SplashScreen> {
                   padding: const EdgeInsets.all(32),
                   child: error == null
                       ? Column(mainAxisSize: MainAxisSize.min, children: [
-                          Image.asset('assets/logo.png',
-                              width: 96, height: 96),
+                          Image.asset('assets/logo.png', width: 96, height: 96),
                           const SizedBox(height: 16),
                           const Text('WortSchatz',
                               style: TextStyle(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800)),
+                                  fontSize: 26, fontWeight: FontWeight.w800)),
                           const SizedBox(height: 24),
                           const CircularProgressIndicator(),
                           const SizedBox(height: 16),

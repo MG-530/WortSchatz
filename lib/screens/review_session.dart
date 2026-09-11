@@ -59,9 +59,10 @@ class _ReviewSessionState extends State<ReviewSession> {
 
   @override
   Widget build(BuildContext c) {
-    if (widget.words.isEmpty)
+    if (widget.words.isEmpty) {
       return const Scaffold(
           body: Center(child: Text('واژه ای اماده برای مرور نیست')));
+    }
     final w = widget.words[i];
     return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
@@ -73,11 +74,12 @@ class _ReviewSessionState extends State<ReviewSession> {
                   child: GestureDetector(
                       onTap: () => setState(() => show = !show),
                       onHorizontalDragEnd: (d) {
-                        if (d.primaryVelocity != null)
+                        if (d.primaryVelocity != null) {
                           setState(() => i = (i +
                                   (d.primaryVelocity! > 0 ? -1 : 1) +
                                   widget.words.length) %
                               widget.words.length);
+                        }
                       },
                       child: SizedBox(
                           width: double.infinity,
@@ -183,9 +185,9 @@ class _ReviewSessionState extends State<ReviewSession> {
     if (widget.extra.isNotEmpty && mounted) {
       final go = await showDialog<bool>(
         context: context,
-        builder: (d) => AlertDialog(
-            title: const Text('مرور آمده تمام شد'),
-            content: const Text(
+        builder: (d) => const AlertDialog(
+            title: Text('مرور آمده تمام شد'),
+            content: Text(
                 'واژه‌های آماده‌نشده را هم مرور می‌کنی؟ در این حالت باکس‌ها تغییر نمی‌شود.')),
       );
       if (go == true && mounted) {
@@ -196,7 +198,11 @@ class _ReviewSessionState extends State<ReviewSession> {
                     words: widget.extra,
                     title: 'مرور غیرآماده',
                     extra: const [])));
-      } else if (mounted) Navigator.pop(context);
-    } else if (mounted) Navigator.pop(context);
+      } else if (mounted) {
+        Navigator.pop(context);
+      }
+    } else if (mounted) {
+      Navigator.pop(context);
+    }
   }
 }

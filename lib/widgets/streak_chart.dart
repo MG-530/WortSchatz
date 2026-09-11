@@ -22,7 +22,8 @@ class StreakChart extends StatelessWidget {
         child: Column(
           children: [
             Text('🔥 $currentStreak روز پشت سر هم',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text('طولانی‌ترین: $longestStreak روز',
                 style: const TextStyle(fontSize: 14, color: Colors.grey)),
@@ -31,9 +32,8 @@ class StreakChart extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(7, (i) {
                 final count = i < days.length ? days[i] : 0;
-                final height = maxBar > 0
-                    ? (count / maxBar).clamp(0.1, 1.0)
-                    : 0.0;
+                final height =
+                    maxBar > 0 ? (count / maxBar).clamp(0.1, 1.0) : 0.0;
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -54,7 +54,16 @@ class StreakChart extends StatelessWidget {
                           : null,
                     ),
                     const SizedBox(height: 4),
-                    Text(['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'][i],
+                    Text(
+                        [
+                          'شنبه',
+                          'یکشنبه',
+                          'دوشنبه',
+                          'سه‌شنبه',
+                          'چهارشنبه',
+                          'پنج‌شنبه',
+                          'جمعه'
+                        ][i],
                         style: const TextStyle(fontSize: 10)),
                   ],
                 );

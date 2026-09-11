@@ -16,24 +16,21 @@ void main() {
             body: Center(
                 child: Padding(
                     padding: const EdgeInsets.all(32),
-                    child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.error_outline,
-                              size: 64, color: Colors.red),
-                          const SizedBox(height: 16),
-                          const Text('مشکلی پیش آمد',
-                              style: TextStyle(
-                                  fontSize: 20, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Text(
-                              kDebugMode
-                                  ? details.exceptionAsString()
-                                  : 'لطفاً برنامه را دوباره باز کنید.',
-                              textAlign: TextAlign.center,
-                              style:
-                                  const TextStyle(color: Colors.grey)),
-                        ])))));
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.error_outline,
+                          size: 64, color: Colors.red),
+                      const SizedBox(height: 16),
+                      const Text('مشکلی پیش آمد',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text(
+                          kDebugMode
+                              ? details.exceptionAsString()
+                              : 'لطفاً برنامه را دوباره باز کنید.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.grey)),
+                    ])))));
 
     // sqlite FFI is only needed (and only works) on desktop.
     // On Android/iOS the default sqflite factory is used.

@@ -160,7 +160,9 @@ class _ReviewState extends State<ReviewPage> {
         Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: DropdownButtonFormField<String>(
-                value: level,
+                // Rebuilt on level change so initialValue stays in sync.
+                key: ValueKey('level-$level'),
+                initialValue: level,
                 decoration: const InputDecoration(labelText: 'سطح'),
                 items: const [
                   DropdownMenuItem(value: 'A1', child: Text('A1')),

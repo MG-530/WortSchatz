@@ -110,9 +110,10 @@ class _WritingReviewState extends State<WritingReviewSession> {
 
   @override
   Widget build(BuildContext c) {
-    if (widget.words.isEmpty)
+    if (widget.words.isEmpty) {
       return const Scaffold(
           body: Center(child: Text('واژه ای اماده برای مرور نیست')));
+    }
     return Scaffold(
         appBar: AppBar(title: Text(widget.title)),
         body: Padding(
@@ -144,7 +145,8 @@ class _WritingReviewState extends State<WritingReviewSession> {
               Row(children: [
                 Expanded(
                     child: OutlinedButton.icon(
-                        onPressed: checked ? null : () => setState(() => hint = !hint),
+                        onPressed:
+                            checked ? null : () => setState(() => hint = !hint),
                         icon: const Icon(Icons.lightbulb_outline),
                         label: const Text('راهنما'))),
                 const SizedBox(width: 8),

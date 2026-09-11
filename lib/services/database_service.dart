@@ -233,7 +233,7 @@ class VocabularyDb {
     };
   }
 
-  Future<void> init_merged() => init();
+  Future<void> initMerged() => init();
 
   Future<List<Word>> all(
       {String query = '', String? level, int? lesson, String? wordType}) async {
@@ -304,10 +304,11 @@ class VocabularyDb {
     final batch = _db!.batch();
     for (final raw in rows) {
       final x = Map<String, dynamic>.from(raw as Map);
-      if (x['id'] != null)
+      if (x['id'] != null) {
         batch.update(
             'words', {'box': x['box'] ?? 0, 'next_review': x['next_review']},
             where: 'id = ?', whereArgs: [x['id']]);
+      }
     }
     await batch.commit(noResult: true);
   }

@@ -55,6 +55,8 @@ class _LessonsState extends State<LessonsPage> {
 
   Future<void> addScope(String title,
       {int? lesson, String? levelFilter}) async {
+    // Capture before async gaps (avoids BuildContext across awaits).
+    final messenger = ScaffoldMessenger.of(context);
     // Load fresh data to ensure we have the latest box status
     final freshWords =
         await VocabularyDb.instance.all(level: levelFilter ?? level);
@@ -76,7 +78,7 @@ class _LessonsState extends State<LessonsPage> {
     }).length;
 
     if (wordsToAdd.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
           const SnackBar(content: Text('همه واژه‌ها قبلاً در لایتنر هستند')));
       return;
     }
@@ -92,7 +94,7 @@ class _LessonsState extends State<LessonsPage> {
     await batch.commit(noResult: true);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      messenger.showSnackBar(SnackBar(
           content: Text(alreadyIn == 0
               ? '${wordsToAdd.length} واژه از $title به لایتنر اضافه شد'
               : '${wordsToAdd.length} واژه اضافه شد ($alreadyIn واژه قبلاً در لایتنر بود و دست نخورد)')));
@@ -153,7 +155,10 @@ class _LessonsState extends State<LessonsPage> {
               style: TextStyle(color: Colors.grey)),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-              value: level,
+              // Keyed by level: initialValue only applies on first build,
+              // so a fresh field is needed whenever the level changes.
+              key: ValueKey('level-$level'),
+              initialValue: level,
               decoration: const InputDecoration(labelText: 'سطح'),
               items: const [
                 DropdownMenuItem(value: 'A1', child: Text('A1 — فعال')),
