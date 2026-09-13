@@ -61,6 +61,24 @@ class Word {
 
   String codeFor(int stored) => lessonCode(level, stored);
 
+  /// True when [input] spells this word, with or without its article
+  /// ("Apfel" and "der Apfel" are both accepted for der Apfel).
+  bool matchesSpelling(String input) {
+    String norm(String s) {
+      var t = s.trim().toLowerCase();
+      for (final a in ['der ', 'die ', 'das ']) {
+        if (t.startsWith(a)) {
+          t = t.substring(a.length);
+          break;
+        }
+      }
+      return t.trim();
+    }
+
+    final want = norm(german);
+    return want.isNotEmpty && norm(input) == want;
+  }
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'german': german,

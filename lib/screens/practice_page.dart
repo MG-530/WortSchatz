@@ -59,8 +59,8 @@ class _PracticeState extends State<PracticePage> {
     }
   }
 
-  void check(String correct) {
-    final ok = answer.text.trim().toLowerCase() == correct.trim().toLowerCase();
+  void check(Word word) {
+    final ok = word.matchesSpelling(answer.text);
     if (ok) {
       _correct++;
       setState(() => feedback = 'درست است');
@@ -140,7 +140,7 @@ class _PracticeState extends State<PracticePage> {
                             Row(children: [
                               Expanded(
                                   child: FilledButton(
-                                      onPressed: () => check(q.german),
+                                      onPressed: () => check(q),
                                       child: const Text('بررسی'))),
                               const SizedBox(width: 8),
                               Expanded(
@@ -201,7 +201,7 @@ class _PracticeState extends State<PracticePage> {
                             Row(children: [
                               Expanded(
                                   child: FilledButton(
-                                      onPressed: () => check(q.german),
+                                      onPressed: () => check(q),
                                       child: const Text('بررسی'))),
                               const SizedBox(width: 8),
                               Expanded(

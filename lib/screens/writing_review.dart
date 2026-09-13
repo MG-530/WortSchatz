@@ -70,7 +70,10 @@ class _WritingReviewState extends State<WritingReviewSession> {
 
   Future<void> submit() async {
     if (checked) return;
-    final ok = typed.trim().toLowerCase() == w.german.trim().toLowerCase();
+    // Compare the actual field content (not the chip-built buffer):
+    // keyboard typing never updated `typed`, so every typed answer
+    // used to be graded wrong.
+    final ok = w.matchesSpelling(input.text);
     await VocabularyDb.instance.grade(w, ok);
     _graded++;
     setState(() {
