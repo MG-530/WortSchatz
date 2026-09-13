@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/header.dart';
 import '../services/database_service.dart';
+import '../services/settings_service.dart';
 import '../models/word.dart';
 import 'learn_session.dart';
-import 'practice_page.dart';
 import 'article_quiz.dart';
 
 class LessonsPage extends StatefulWidget {
@@ -44,8 +44,9 @@ class _LessonsState extends State<LessonsPage> {
       }
       return;
     }
-    final p = await SharedPreferences.getInstance();
-    await p.setString('level', v);
+    // Route through AppSettings so the global revision bumps and
+    // every tab refreshes immediately.
+    await AppSettings.setString('level', v);
     setState(() => level = v);
     w = await VocabularyDb.instance.all(level: level);
     if (mounted) setState(() {});

@@ -1,6 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppSettings {
+  /// Bumped on every settings write. Home listens to it so any change
+  /// (level, audio, goal, …) rebuilds the tabs immediately and the user
+  /// sees the result without manual refresh.
+  static final ValueNotifier<int> revision = ValueNotifier<int>(0);
+  static void _bump() => revision.value++;
   static Future<bool> get autoPlay async =>
       (await SharedPreferences.getInstance()).getBool('autoPlay') ?? true;
   static Future<bool> get onlineAudio async =>
@@ -19,10 +25,18 @@ class AppSettings {
       'Starten Wir A1';
   static Future<String> get level async =>
       (await SharedPreferences.getInstance()).getString('level') ?? 'A1';
-  static Future<void> setBool(String key, bool value) async =>
-      await (await SharedPreferences.getInstance()).setBool(key, value);
-  static Future<void> setInt(String key, int value) async =>
-      await (await SharedPreferences.getInstance()).setInt(key, value);
-  static Future<void> setString(String key, String value) async =>
-      await (await SharedPreferences.getInstance()).setString(key, value);
+  static Future<void> setBool(String key, bool value) async {
+    await (await SharedPreferences.getInstance()).setBool(key, value);
+    _bump();
+  }
+
+  static Future<void> setInt(String key, int value) async {
+    await (await SharedPreferences.getInstance()).setInt(key, value);
+    _bump();
+  }
+
+  static Future<void> setString(String key, String value) async {
+    await (await SharedPreferences.getInstance()).setString(key, value);
+    _bump();
+  }
 }

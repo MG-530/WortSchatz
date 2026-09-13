@@ -33,6 +33,25 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    AppSettings.revision.addListener(_onSettingsChanged);
+  }
+
+  @override
+  void dispose() {
+    AppSettings.revision.removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  /// Any settings write rebuilds the data tabs at once, so the user
+  /// sees the result immediately without manual refresh.
+  void _onSettingsChanged() {
+    if (mounted) {
+      setState(() {
+        _dashSeed++;
+        _lessSeed++;
+        _revSeed++;
+      });
+    }
   }
 
   Future<void> _openSettings(BuildContext c) async {
