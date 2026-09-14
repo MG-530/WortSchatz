@@ -15,6 +15,11 @@ class AppSettings {
       (await SharedPreferences.getInstance()).getBool('articleTts') ?? true;
   static Future<int> get dailyGoal async =>
       (await SharedPreferences.getInstance()).getInt('dailyGoal') ?? 10;
+
+  /// Leitner/review audio: 0 = silent, 1 = question + answer side,
+  /// 2 = answer side only.
+  static Future<int> get leitnerAudio async =>
+      (await SharedPreferences.getInstance()).getInt('leitnerAudio') ?? 0;
   static Future<String> get reminder async =>
       (await SharedPreferences.getInstance()).getString('reminder') ?? '20:00';
   static Future<String> get course async =>

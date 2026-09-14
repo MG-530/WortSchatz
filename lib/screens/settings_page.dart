@@ -18,7 +18,7 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsState extends State<SettingsPage> {
   bool auto = true, online = false, articleTts = true;
-  int goal = 10;
+  int goal = 10, leitnerAudio = 0;
   String time = '20:00', level = 'A1', message = '';
 
   @override
@@ -35,6 +35,7 @@ class _SettingsState extends State<SettingsPage> {
       online = p.getBool('onlineAudio') ?? false;
       articleTts = p.getBool('articleTts') ?? true;
       goal = p.getInt('dailyGoal') ?? 10;
+      leitnerAudio = p.getInt('leitnerAudio') ?? 0;
       time = p.getString('reminder') ?? '20:00';
       level = p.getString('level') ?? 'A1';
     });
@@ -95,8 +96,7 @@ class _SettingsState extends State<SettingsPage> {
       final files = await FilePicker.pickFiles(
           type: FileType.custom, allowedExtensions: ['json']);
       if (files.isEmpty || files.single.path == null) return;
-      final data =
-          jsonDecode(await File(files.single.path!).readAsString());
+      final data = jsonDecode(await File(files.single.path!).readAsString());
       await VocabularyDb.instance.restoreRows(data['words'] as List);
       setState(() => message = 'بازیابی پیشرفت انجام شد');
     } catch (e) {
@@ -192,6 +192,30 @@ class _SettingsState extends State<SettingsPage> {
               subtitle: const Text('روشن: «der Apfel» — خاموش: فقط «Apfel»'),
               value: articleTts,
               onChanged: (v) => boolSet('articleTts', v)),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: DropdownButtonFormField<int>(
+                  key: ValueKey('leitnerAudio-$leitnerAudio'),
+                  initialValue: leitnerAudio,
+                  decoration:
+                      const InputDecoration(labelText: 'صدا در لایتنر و کوئیز'),
+                  items: const [
+                    DropdownMenuItem(value: 0, child: Text('بی‌صدا')),
+                    DropdownMenuItem(
+                        value: 1, child: Text('صدا روی کارت و پشت کارت')),
+                    DropdownMenuItem(value: 2, child: Text('صدا فقط پشت کارت')),
+                  ],
+                  onChanged: (v) async {
+                    if (v != null) {
+                      await AppSettings.setInt('leitnerAudio', v);
+                      if (mounted) {
+                        setState(() {
+                          leitnerAudio = v;
+                          message = 'ذخیره شد';
+                        });
+                      }
+                    }
+                  })),
           ListTile(
               title: const Text('زمان یادآوری مرور'),
               subtitle: Text(time),

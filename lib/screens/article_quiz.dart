@@ -1,7 +1,9 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../models/word.dart';
+import '../services/audio_service.dart';
 import '../services/database_service.dart';
+import '../services/settings_service.dart';
 import '../services/streak_service.dart';
 import '../widgets/header.dart';
 
@@ -31,6 +33,10 @@ class _ArticleQuizState extends State<ArticleQuizPage> {
   int answered = 0;
   bool loaded = false;
 
+  /// Leitner audio mode; in quiz only mode 1 (question side) speaks,
+  /// always the bare word so the article answer never leaks.
+  int _audioMode = 0;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +44,7 @@ class _ArticleQuizState extends State<ArticleQuizPage> {
   }
 
   Future<void> load() async {
+    _audioMode = await AppSettings.leitnerAudio;
     var all = await VocabularyDb.instance.all(level: widget.level);
     if (widget.lesson != null) {
       all = all.where((w) => w.lessons.contains(widget.lesson)).toList();
@@ -45,7 +52,17 @@ class _ArticleQuizState extends State<ArticleQuizPage> {
     all.shuffle();
     words =
         all.where((w) => options.contains(w.article)).take(perSession).toList();
-    if (mounted) setState(() => loaded = true);
+    if (mounted) {
+      setState(() => loaded = true);
+      _playCurrent();
+    }
+  }
+
+  void _playCurrent() {
+    final q = x;
+    if (_audioMode == 1 && q != null) {
+      playWord(q, withArticle: false);
+    }
   }
 
   String get scopeLabel => widget.lesson == null
@@ -82,6 +99,7 @@ class _ArticleQuizState extends State<ArticleQuizPage> {
           locked = false;
           picked = null;
         });
+        _playCurrent();
       }
     });
   }
@@ -96,6 +114,7 @@ class _ArticleQuizState extends State<ArticleQuizPage> {
       correct = 0;
       answered = 0;
     });
+    _playCurrent();
   }
 
   Color? optionColor(String a) {

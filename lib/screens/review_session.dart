@@ -2,7 +2,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../models/word.dart';
 import '../helpers/colors.dart';
+import '../services/audio_service.dart';
 import '../services/database_service.dart';
+import '../services/settings_service.dart';
 import '../services/streak_service.dart';
 
 class ReviewSession extends StatefulWidget {
@@ -36,6 +38,10 @@ class _ReviewSessionState extends State<ReviewSession> {
   /// Plural forms for this session's nouns (one batch query).
   Map<String, String> plurals = {};
 
+  /// Leitner audio mode (0 = silent, 1 = front + back, 2 = back only).
+  int _audioMode = 0;
+  bool _onlineAudio = false;
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +51,41 @@ class _ReviewSessionState extends State<ReviewSession> {
         .then((m) {
       if (mounted) setState(() => plurals = m);
     });
+    _loadAudio();
+  }
+
+  Future<void> _loadAudio() async {
+    _audioMode = await AppSettings.leitnerAudio;
+    _onlineAudio = await AppSettings.onlineAudio;
+    if (_audioMode == 1 && mounted && widget.words.isNotEmpty) {
+      _playFront();
+    }
+  }
+
+  void _playFront() {
+    if (widget.words.isEmpty) return;
+    // Bare word only: a spoken article would leak the gender hint.
+    playWord(widget.words[i], online: _onlineAudio, withArticle: false);
+  }
+
+  void _playBack() {
+    if (widget.words.isEmpty) return;
+    // Full form; the article follows the articleTts setting.
+    playWord(widget.words[i], online: _onlineAudio);
+  }
+
+  void _reveal() {
+    final willShow = !show;
+    setState(() => show = willShow);
+    if (willShow && _audioMode >= 1) _playBack();
+  }
+
+  void _moveTo(int next) {
+    setState(() {
+      i = next;
+      show = false;
+    });
+    if (_audioMode == 1) _playFront();
   }
 
   @override
@@ -72,10 +113,10 @@ class _ReviewSessionState extends State<ReviewSession> {
               Text('کارت ${i + 1} از ${widget.words.length}'),
               Expanded(
                   child: GestureDetector(
-                      onTap: () => setState(() => show = !show),
+                      onTap: _reveal,
                       onHorizontalDragEnd: (d) {
                         if (d.primaryVelocity != null) {
-                          setState(() => i = (i +
+                          _moveTo((i +
                                   (d.primaryVelocity! > 0 ? -1 : 1) +
                                   widget.words.length) %
                               widget.words.length);
@@ -158,20 +199,14 @@ class _ReviewSessionState extends State<ReviewSession> {
   /// Go to the previous card without grading it.
   void _goBack() {
     if (widget.words.isEmpty) return;
-    setState(() {
-      i = (i - 1 + widget.words.length) % widget.words.length;
-      show = false;
-    });
+    _moveTo((i - 1 + widget.words.length) % widget.words.length);
   }
 
   void _handleAnswer(bool known) {
     VocabularyDb.instance.grade(widget.words[i], known);
     _answered++;
     if (i + 1 < widget.words.length) {
-      setState(() {
-        i++;
-        show = false;
-      });
+      _moveTo(i + 1);
     } else {
       _finishSession();
     }
@@ -197,7 +232,8 @@ class _ReviewSessionState extends State<ReviewSession> {
                 builder: (_) => ReviewSession(
                     words: widget.extra,
                     title: 'مرور غیرآماده',
-                    extra: const [])));
+                    extra: const [],
+                    reverseMode: widget.reverseMode)));
       } else if (mounted) {
         Navigator.pop(context);
       }
