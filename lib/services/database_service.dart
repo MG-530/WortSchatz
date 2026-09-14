@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as pth;
 import '../models/word.dart';
@@ -24,12 +25,16 @@ class VocabularyDb {
   /// actions; re-adding enrolled words is impossible by construction.
   Future<void> init() async {
     final dbPath = pth.join(await getDatabasesPath(), 'starten_wir_a1.db');
-    _db = await openDatabase(dbPath, version: 3, onCreate: (db, v) async {
+    _db = await openDatabase(dbPath, version: 4, onCreate: (db, v) async {
       await db.execute(
-          'CREATE TABLE words(id INTEGER PRIMARY KEY, german TEXT, display TEXT, article TEXT, persian TEXT, english TEXT, pronunciation TEXT, word_type TEXT, gender TEXT, level TEXT, lessons TEXT, box INTEGER DEFAULT 0, next_review TEXT)');
+          'CREATE TABLE words(id INTEGER PRIMARY KEY, german TEXT, display TEXT, article TEXT, persian TEXT, english TEXT, pronunciation TEXT, word_type TEXT, gender TEXT, level TEXT, lessons TEXT, box INTEGER DEFAULT 0, next_review TEXT, starred INTEGER DEFAULT 0)');
     }, onUpgrade: (db, oldVersion, newVersion) async {
       if (oldVersion < 2) {
         await db.execute('ALTER TABLE words ADD COLUMN level TEXT');
+      }
+      if (oldVersion < 4) {
+        await db
+            .execute('ALTER TABLE words ADD COLUMN starred INTEGER DEFAULT 0');
       }
       if (oldVersion < 3) {
         // One-way migration to the enrollment model: old box-0 rows were
@@ -40,41 +45,57 @@ class VocabularyDb {
             'UPDATE words SET box = -1, next_review = NULL WHERE box = 0');
       }
     });
-    final raw =
-        jsonDecode(await rootBundle.loadString('assets/vocab_merged.json'))
-            as List;
+    // Self-heal: if a migration was ever skipped (e.g. hot reload kept an
+    // old database open while new code ran), add the missing column now
+    // instead of crashing on first use.
+    await _ensureColumn('words', 'starred',
+        'ALTER TABLE words ADD COLUMN starred INTEGER DEFAULT 0');
+    final prefs = await SharedPreferences.getInstance();
     final count = Sqflite.firstIntValue(
             await _db!.rawQuery('SELECT COUNT(*) FROM words')) ??
         0;
-    final fresh = count != raw.length;
-    if (fresh) {
-      await _db!.execute('DROP TABLE IF EXISTS words');
-      await _db!.execute(
-          'CREATE TABLE words(id INTEGER PRIMARY KEY, german TEXT, display TEXT, article TEXT, persian TEXT, english TEXT, pronunciation TEXT, word_type TEXT, gender TEXT, level TEXT, lessons TEXT, box INTEGER DEFAULT 0, next_review TEXT)');
-    }
+    // Fast path: when the DB count matches the last-seeded asset count and
+    // the metadata version is current, there is nothing to do — skip the
+    // 1.2MB asset load and all per-row writes (this used to cost seconds
+    // on every single launch).
+    final metaDone = prefs.getInt('vocabMetaVersion') ?? 0;
     final words = <Map<String, dynamic>>[];
-    for (final x in raw) {
-      // Lesson numbers are ALWAYS 1..12. The old 101..112 A2 offset was
-      // only a level hack — the level column distinguishes levels now.
-      final lessons = (x['lessons'] as List? ?? []).map((l) {
-        final n = l as int;
-        return n > 100 ? n - 100 : n;
-      }).join(',');
-      words.add({
-        'id': words.length + 1,
-        'german': x['german'] ?? '',
-        'display': x['display'] ?? '',
-        'article': x['article'] ?? '',
-        'persian': x['persian'] ?? '',
-        'english': x['english'] ?? '',
-        'pronunciation': x['pronunciation'] ?? '',
-        'word_type': x['word_type'] ?? 'other',
-        'gender': x['gender'] ?? '',
-        'level': x['level'] ?? 'A1',
-        'lessons': lessons,
-        'box': -1,
-        'next_review': null,
-      });
+    var fresh = false;
+    if (count != (prefs.getInt('vocabAssetCount') ?? -1) ||
+        metaDone < metaVersion) {
+      final raw =
+          jsonDecode(await rootBundle.loadString('assets/vocab_merged.json'))
+              as List;
+      fresh = count != raw.length;
+      if (fresh) {
+        await _db!.execute('DROP TABLE IF EXISTS words');
+        await _db!.execute(
+            'CREATE TABLE words(id INTEGER PRIMARY KEY, german TEXT, display TEXT, article TEXT, persian TEXT, english TEXT, pronunciation TEXT, word_type TEXT, gender TEXT, level TEXT, lessons TEXT, box INTEGER DEFAULT 0, next_review TEXT, starred INTEGER DEFAULT 0)');
+      }
+      for (final x in raw) {
+        // Lesson numbers are ALWAYS 1..12. The old 101..112 A2 offset was
+        // only a level hack — the level column distinguishes levels now.
+        final lessons = (x['lessons'] as List? ?? []).map((l) {
+          final n = l as int;
+          return n > 100 ? n - 100 : n;
+        }).join(',');
+        words.add({
+          'id': words.length + 1,
+          'german': x['german'] ?? '',
+          'display': x['display'] ?? '',
+          'article': x['article'] ?? '',
+          'persian': x['persian'] ?? '',
+          'english': x['english'] ?? '',
+          'pronunciation': x['pronunciation'] ?? '',
+          'word_type': x['word_type'] ?? 'other',
+          'gender': x['gender'] ?? '',
+          'level': x['level'] ?? 'A1',
+          'lessons': lessons,
+          'box': -1,
+          'next_review': null,
+        });
+      }
+      await prefs.setInt('vocabAssetCount', raw.length);
     }
     try {
       if (fresh) {
@@ -86,27 +107,15 @@ class VocabularyDb {
             await _db!.insert('words', words[i]);
           }
         }
-      } else {
-        // Same word count: only backfill metadata (level, normalized
-        // lessons, and b-amooz-checked word_type/article/gender/display).
-        // NEVER touch box / next_review here — resetting them would wipe
-        // the user's Leitner progress on every app start.
+      } else if (words.isNotEmpty) {
+        // Same word count but metadata upgrade pending: backfill metadata
+        // (level, normalized lessons, b-amooz-checked fields) in ONE batch
+        // instead of thousands of sequential writes. NEVER touches box /
+        // next_review, so Leitner progress is preserved.
         // This also migrates old DBs storing A2 lessons as 101..112.
-        for (var i = 0; i < words.length; i++) {
-          await _db!.update(
-              'words',
-              {
-                'level': words[i]['level'],
-                'lessons': words[i]['lessons'],
-                'word_type': words[i]['word_type'],
-                'article': words[i]['article'],
-                'gender': words[i]['gender'],
-                'display': words[i]['display'],
-              },
-              where: 'id = ?',
-              whereArgs: [words[i]['id']]);
-        }
+        await _backfillMetadata(words);
       }
+      await prefs.setInt('vocabMetaVersion', metaVersion);
     } catch (e, st) {
       // Never fail silently: log the seed error, then attempt a
       // non-destructive fallback (metadata backfill only, progress kept).
@@ -114,20 +123,8 @@ class VocabularyDb {
       // instead of corrupting data quietly.
       debugPrint('VocabularyDb seed failed: $e\n$st');
       try {
-        for (var i = 0; i < words.length; i++) {
-          await _db!.update(
-              'words',
-              {
-                'level': words[i]['level'],
-                'lessons': words[i]['lessons'],
-                'word_type': words[i]['word_type'],
-                'article': words[i]['article'],
-                'gender': words[i]['gender'],
-                'display': words[i]['display'],
-              },
-              where: 'id = ?',
-              whereArgs: [words[i]['id']]);
-        }
+        if (words.isNotEmpty) await _backfillMetadata(words);
+        await prefs.setInt('vocabMetaVersion', metaVersion);
       } catch (e2, st2) {
         debugPrint('VocabularyDb fallback seed failed: $e2\n$st2');
         rethrow;
@@ -152,6 +149,22 @@ class VocabularyDb {
       batch.insert('plurals', {'german': german, 'plural': plural as String});
     });
     await batch.commit(noResult: true);
+  }
+
+  /// Flip the difficult marker of a word (1 - 0, NULL-safe).
+  Future<void> toggleStar(int id) async {
+    await _db!.rawUpdate(
+        'UPDATE words SET starred = 1 - COALESCE(starred, 0) WHERE id = ?',
+        [id]);
+  }
+
+  /// Ids of starred words among the given ids (one query).
+  Future<Set<int>> starredIn(List<int> ids) async {
+    if (ids.isEmpty) return {};
+    final ph = List.filled(ids.length, '?').join(',');
+    final rows = await _db!.rawQuery(
+        'SELECT id FROM words WHERE id IN ($ph) AND starred = 1', ids);
+    return {for (final r in rows) r['id'] as int};
   }
 
   /// Plural form of a noun, or null when unknown.
@@ -231,6 +244,45 @@ class VocabularyDb {
       'url': row['url'] as String? ?? '',
       'moods': jsonDecode(row['data'] as String? ?? '[]'),
     };
+  }
+
+  /// Add [column] to [table] unless it already exists. Safety net for
+  /// migrations that were skipped (hot reload, interrupted upgrade, …).
+  /// Asset metadata version. Bump when vocab_merged.json content changes
+  /// in ways that need a backfill (same word count, different fields).
+  /// Word-count changes trigger a full reseed automatically.
+  static const int metaVersion = 2;
+
+  /// Metadata backfill in a single batch (one transaction): level,
+  /// normalized lessons, word_type, article, gender, display.
+  /// Never touches box / next_review.
+  Future<void> _backfillMetadata(List<Map<String, dynamic>> words) async {
+    final batch = _db!.batch();
+    for (final w in words) {
+      batch.update(
+          'words',
+          {
+            'level': w['level'],
+            'lessons': w['lessons'],
+            'word_type': w['word_type'],
+            'article': w['article'],
+            'gender': w['gender'],
+            'display': w['display'],
+          },
+          where: 'id = ?',
+          whereArgs: [w['id']]);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> _ensureColumn(
+      String table, String column, String addColumnSql) async {
+    final info = await _db!.rawQuery('PRAGMA table_info($table)');
+    final exists = info.any((c) => c['name'] == column);
+    if (!exists) {
+      debugPrint('VocabularyDb: adding missing column $table.$column');
+      await _db!.execute(addColumnSql);
+    }
   }
 
   Future<void> initMerged() => init();
