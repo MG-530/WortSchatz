@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../services/streak_service.dart';
 
 class StreakChart extends StatelessWidget {
   final int currentStreak;
   final int longestStreak;
-  final List<int> days;
+  final List<StreakDay> days;
 
   const StreakChart({
     super.key,
@@ -14,7 +15,9 @@ class StreakChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
-    final maxBar = days.isEmpty ? 0 : days.reduce((a, b) => a > b ? a : b);
+    final maxBar = days.isEmpty
+        ? 0
+        : days.map((d) => d.count).reduce((a, b) => a > b ? a : b);
     return Card(
       color: const Color(0xfff0ecff),
       child: Padding(
@@ -31,7 +34,11 @@ class StreakChart extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: List.generate(7, (i) {
-                final count = i < days.length ? days[i] : 0;
+                final day = i < days.length
+                    ? days[i]
+                    : StreakDay(
+                        DateTime.now().subtract(Duration(days: 6 - i)), 0);
+                final count = day.count;
                 final height =
                     maxBar > 0 ? (count / maxBar).clamp(0.1, 1.0) : 0.0;
                 return Column(
@@ -54,16 +61,9 @@ class StreakChart extends StatelessWidget {
                           : null,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                        [
-                          'شنبه',
-                          'یکشنبه',
-                          'دوشنبه',
-                          'سه‌شنبه',
-                          'چهارشنبه',
-                          'پنج‌شنبه',
-                          'جمعه'
-                        ][i],
+                    // Real weekday of that date (system clock),
+                    // never a hardcoded Saturday-first list.
+                    Text(weekdayFa(day.date),
                         style: const TextStyle(fontSize: 10)),
                   ],
                 );

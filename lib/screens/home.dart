@@ -115,7 +115,7 @@ class _DashboardState extends State<Dashboard> {
   int todayCount = 0;
   int currentStreak = 0;
   int longestStreak = 0;
-  List<int> streakDays = [];
+  List<StreakDay> streakDays = [];
 
   @override
   void initState() {
@@ -131,7 +131,7 @@ class _DashboardState extends State<Dashboard> {
     streakDays = await StreakService.getLast7Days();
     currentStreak = sd.currentStreak;
     longestStreak = sd.longestStreak;
-    todayCount = streakDays.isNotEmpty ? streakDays.last : 0;
+    todayCount = streakDays.isNotEmpty ? streakDays.last.count : 0;
     if (mounted) setState(() => s = x);
   }
 

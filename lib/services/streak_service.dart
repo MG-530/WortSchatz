@@ -1,5 +1,24 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// One day of study activity, dated by the system clock.
+class StreakDay {
+  final DateTime date;
+  final int count;
+  const StreakDay(this.date, this.count);
+}
+
+/// Persian weekday name from the real system date.
+/// DateTime.weekday is Mon=1..Sun=7; the Persian week starts Saturday.
+String weekdayFa(DateTime d) => const [
+      'شنبه',
+      'یکشنبه',
+      'دوشنبه',
+      'سه‌شنبه',
+      'چهارشنبه',
+      'پنج‌شنبه',
+      'جمعه'
+    ][(d.weekday + 1) % 7];
+
 class StreakData {
   final int currentStreak;
   final int longestStreak;
@@ -69,16 +88,18 @@ class StreakService {
     await prefs.setInt('$_keyDailyCount$todayKey', wordsStudied);
   }
 
-  static Future<List<int>> getLast7Days() async {
+  /// Last 7 days (oldest → today), each stamped with its real
+  /// system-clock date so weekday labels always match reality.
+  static Future<List<StreakDay>> getLast7Days() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
-    final List<int> days = [];
+    final List<StreakDay> days = [];
 
     for (int i = 6; i >= 0; i--) {
       final day = now.subtract(Duration(days: i));
       final key = _dateKey(day);
       final count = prefs.getInt('$_keyDailyCount$key') ?? 0;
-      days.add(count);
+      days.add(StreakDay(DateTime(day.year, day.month, day.day), count));
     }
     return days;
   }
