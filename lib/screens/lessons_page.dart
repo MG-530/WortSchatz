@@ -183,7 +183,7 @@ class _LessonsState extends State<LessonsPage> {
         child: Card(
             child: ListTile(
                 leading: const Icon(Icons.chevron_right),
-                title: Text('درس $code — Lektion $d',
+                title: Text('$code — Lektion $d',
                     style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text('${count(l)} واژه'),
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -235,29 +235,17 @@ class _LessonsState extends State<LessonsPage> {
               label: Text('افزودن کل کتاب به لایتنر ($level)'))),
       Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(children: [
-            Expanded(
-                child: OutlinedButton.icon(
-                    onPressed: w.isEmpty
-                        ? null
-                        : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => PracticePage(level: level))),
-                    icon: const Icon(Icons.keyboard),
-                    label: const Text('تمرین'))),
-            const SizedBox(width: 8),
-            Expanded(
-                child: OutlinedButton.icon(
-                    onPressed: w.isEmpty
-                        ? null
-                        : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => ArticleQuizPage(level: level))),
-                    icon: const Icon(Icons.quiz_outlined),
-                    label: const Text('کوئیز آرتیکل')))
-          ])),
+          child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                  onPressed: w.isEmpty
+                      ? null
+                      : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => ArticleQuizPage(level: level))),
+                  icon: const Icon(Icons.quiz_outlined),
+                  label: const Text('کوئیز آرتیکل')))),
       const Header('درس‌ها', subtitle: 'درس را انتخاب کن و یادگیری را شروع کن'),
       if (lessons.isEmpty)
         const Padding(
