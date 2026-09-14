@@ -358,8 +358,16 @@ class VocabularyDb {
       final x = Map<String, dynamic>.from(raw as Map);
       if (x['id'] != null) {
         batch.update(
-            'words', {'box': x['box'] ?? 0, 'next_review': x['next_review']},
-            where: 'id = ?', whereArgs: [x['id']]);
+            'words',
+            {
+              'box': x['box'] ?? 0,
+              'next_review': x['next_review'],
+              // Starred flags are part of progress: dropping them here
+              // silently unstars everything on restore.
+              'starred': (x['starred'] ?? 0) == 1 ? 1 : 0,
+            },
+            where: 'id = ?',
+            whereArgs: [x['id']]);
       }
     }
     await batch.commit(noResult: true);
