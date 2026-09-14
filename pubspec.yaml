@@ -35,8 +35,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/vocab.json
-    - assets/vocab2.json
     - assets/vocab_merged.json
     - assets/conjugations.json
     - assets/plurals.json
