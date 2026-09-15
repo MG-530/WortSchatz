@@ -50,6 +50,7 @@ class _ReviewState extends State<ReviewPage> {
   int total(int b) => all.where((w) => w.box == b).length;
   int ready(int b) => all.where((w) => w.box == b && due(w)).length;
   int get newCount => all.where((w) => w.box == 0).length;
+  int get starredCount => all.where((w) => w.starred).length;
   int get dueEnrolledCount => all.where(dueEnrolled).length;
   bool get hasDue => dueEnrolledCount > 0;
 
@@ -57,18 +58,22 @@ class _ReviewState extends State<ReviewPage> {
   /// words at once is neither usable nor useful for retention.
   static const int maxReviewAll = 30;
 
-  String _sheetTitle(int b) => b < 0
-      ? 'مرور همهٔ واژه‌ها'
-      : b == 0
-          ? 'تمرین واژه‌های جدید'
-          : 'مرور باکس $b';
-  String _sessionTitle(int b) => b < 0
-      ? 'مرور آماده'
-      : b == 0
-          ? 'تمرین جدید'
-          : 'مرور باکس $b';
+  String _sheetTitle(int b) => b == -2
+      ? 'مرور سخت‌ها'
+      : b < 0
+          ? 'مرور همهٔ واژه‌ها'
+          : b == 0
+              ? 'تمرین واژه‌های جدید'
+              : 'مرور باکس $b';
+  String _sessionTitle(int b) => b == -2
+      ? 'مرور سخت‌ها'
+      : b < 0
+          ? 'مرور آماده'
+          : b == 0
+              ? 'تمرین جدید'
+              : 'مرور باکس $b';
   String _writingTitle(int b) =>
-      'نوشتاری — ${b < 0 ? 'همه' : b == 0 ? 'جدید' : 'باکس $b'}';
+      'نوشتاری — ${b == -2 ? 'سخت‌ها' : b < 0 ? 'همه' : b == 0 ? 'جدید' : 'باکس $b'}';
 
   /// Push a session and reload counts when it pops, so grading is
   /// immediately visible (no stale box counts).
@@ -84,7 +89,12 @@ class _ReviewState extends State<ReviewPage> {
     // b >= 1: single-box review with a "later" pile.
     final List<Word> readyWords;
     final List<Word> later;
-    if (b < 0) {
+    if (b == -2) {
+      // Difficult words (any box) that are due, capped.
+      readyWords =
+          all.where((w) => w.starred && due(w)).take(maxReviewAll).toList();
+      later = const [];
+    } else if (b < 0) {
       readyWords = all.where(dueEnrolled).take(maxReviewAll).toList();
       later = const [];
     } else if (b == 0) {
@@ -104,6 +114,13 @@ class _ReviewState extends State<ReviewPage> {
       return;
     }
     var reverseMode = false;
+    var shuffle = false;
+    // A shuffled copy; the underlying lists stay in stable order.
+    List<Word> ordered() {
+      if (!shuffle) return readyWords;
+      return List<Word>.of(readyWords)..shuffle();
+    }
+
     showModalBottomSheet(
         context: context,
         builder: (sheet) => StatefulBuilder(
@@ -114,7 +131,7 @@ class _ReviewState extends State<ReviewPage> {
                       child: Text(_sheetTitle(b),
                           style: const TextStyle(
                               fontSize: 20, fontWeight: FontWeight.bold))),
-                  if (b < 0 && dueEnrolledCount > readyWords.length)
+                  if (b == -1 && dueEnrolledCount > readyWords.length)
                     Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
@@ -126,6 +143,11 @@ class _ReviewState extends State<ReviewPage> {
                       subtitle: const Text('سؤال فارسی، جواب آلمانی'),
                       value: reverseMode,
                       onChanged: (v) => setSheet(() => reverseMode = v)),
+                  SwitchListTile(
+                      title: const Text('ترتیب تصادفی'),
+                      subtitle: const Text('کارت‌ها به ترتیب قاطی می‌شوند'),
+                      value: shuffle,
+                      onChanged: (v) => setSheet(() => shuffle = v)),
                   ListTile(
                       leading: const Icon(Icons.style),
                       title: const Text('مرور عادی'),
@@ -133,7 +155,7 @@ class _ReviewState extends State<ReviewPage> {
                       onTap: () {
                         Navigator.pop(sheet);
                         _open(ReviewSession(
-                            words: readyWords,
+                            words: ordered(),
                             title: reverseMode
                                 ? '${_sessionTitle(b)} (معکوس)'
                                 : _sessionTitle(b),
@@ -147,7 +169,7 @@ class _ReviewState extends State<ReviewPage> {
                       onTap: () {
                         Navigator.pop(sheet);
                         _open(WritingReviewSession(
-                            words: readyWords, title: _writingTitle(b)));
+                            words: ordered(), title: _writingTitle(b)));
                       })
                 ]))));
   }
@@ -209,6 +231,13 @@ class _ReviewState extends State<ReviewPage> {
                 onPressed: newCount == 0 ? null : () => choose(0),
                 icon: const Icon(Icons.fiber_new),
                 label: Text('تمرین واژه‌های جدید ($newCount واژه)'))),
+        const SizedBox(height: 8),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: OutlinedButton.icon(
+                onPressed: starredCount == 0 ? null : () => choose(-2),
+                icon: const Icon(Icons.star),
+                label: Text('مرور سخت‌ها ($starredCount واژه)'))),
         const SizedBox(height: 8)
       ]));
 }

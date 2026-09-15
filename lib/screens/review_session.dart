@@ -38,6 +38,9 @@ class _ReviewSessionState extends State<ReviewSession> {
   /// Plural forms for this session's nouns (one batch query).
   Map<String, String> plurals = {};
 
+  /// Ids of session words marked as difficult.
+  Set<int> starred = {};
+
   /// Leitner audio mode (0 = silent, 1 = front + back, 2 = back only).
   int _audioMode = 0;
   bool _onlineAudio = false;
@@ -50,6 +53,11 @@ class _ReviewSessionState extends State<ReviewSession> {
         .pluralsFor(widget.words.map((w) => w.german).toList())
         .then((m) {
       if (mounted) setState(() => plurals = m);
+    });
+    VocabularyDb.instance
+        .starredIn(widget.words.map((w) => w.id).toList())
+        .then((ids) {
+      if (mounted) setState(() => starred = ids);
     });
     _loadAudio();
   }
@@ -72,6 +80,20 @@ class _ReviewSessionState extends State<ReviewSession> {
     if (widget.words.isEmpty) return;
     // Full form; the article follows the articleTts setting.
     playWord(widget.words[i], online: _onlineAudio);
+  }
+
+  Future<void> _toggleStar() async {
+    if (widget.words.isEmpty) return;
+    final id = widget.words[i].id;
+    await VocabularyDb.instance.toggleStar(id);
+    if (!mounted) return;
+    setState(() {
+      if (starred.contains(id)) {
+        starred.remove(id);
+      } else {
+        starred.add(id);
+      }
+    });
   }
 
   void _reveal() {
@@ -106,7 +128,13 @@ class _ReviewSessionState extends State<ReviewSession> {
     }
     final w = widget.words[i];
     return Scaffold(
-        appBar: AppBar(title: Text(widget.title)),
+        appBar: AppBar(title: Text(widget.title), actions: [
+          IconButton(
+              tooltip: 'سخت',
+              icon:
+                  Icon(starred.contains(w.id) ? Icons.star : Icons.star_border),
+              onPressed: _toggleStar)
+        ]),
         body: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(children: [

@@ -13,6 +13,9 @@ class Word {
   final int box;
   final DateTime? nextReview;
 
+  /// Marked as difficult by the user (reviewed separately).
+  final bool starred;
+
   Word({
     required this.id,
     required this.german,
@@ -27,6 +30,7 @@ class Word {
     required this.lessons,
     required this.box,
     this.nextReview,
+    this.starred = false,
   });
 
   factory Word.fromMap(Map<String, dynamic> m) => Word(
@@ -46,6 +50,7 @@ class Word {
             .map(int.parse)
             .toList(),
         box: m['box'] ?? 0,
+        starred: (m['starred'] ?? 0) == 1,
         nextReview: m['next_review'] == null
             ? null
             : DateTime.tryParse(m['next_review']),
@@ -92,6 +97,7 @@ class Word {
         'level': level,
         'lessons': lessons.join(','),
         'box': box,
+        'starred': starred ? 1 : 0,
         'next_review': nextReview?.toIso8601String(),
       };
 }
