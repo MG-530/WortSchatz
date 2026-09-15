@@ -19,6 +19,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsState extends State<SettingsPage> {
   bool auto = true, online = false, articleTts = true;
   int goal = 10, leitnerAudio = 0;
+  String themeMode = 'system';
   String time = '20:00', level = 'A1', message = '';
 
   @override
@@ -36,6 +37,7 @@ class _SettingsState extends State<SettingsPage> {
       articleTts = p.getBool('articleTts') ?? true;
       goal = p.getInt('dailyGoal') ?? 10;
       leitnerAudio = p.getInt('leitnerAudio') ?? 0;
+      themeMode = p.getString('themeMode') ?? 'system';
       time = p.getString('reminder') ?? '20:00';
       level = p.getString('level') ?? 'A1';
     });
@@ -242,6 +244,28 @@ class _SettingsState extends State<SettingsPage> {
                       if (mounted) {
                         setState(() {
                           goal = v;
+                          message = 'ذخیره شد';
+                        });
+                      }
+                    }
+                  })),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: DropdownButtonFormField<String>(
+                  key: ValueKey('theme-$themeMode'),
+                  initialValue: themeMode,
+                  decoration: const InputDecoration(labelText: 'پوسته برنامه'),
+                  items: const [
+                    DropdownMenuItem(value: 'system', child: Text('سیستم')),
+                    DropdownMenuItem(value: 'light', child: Text('روشن')),
+                    DropdownMenuItem(value: 'dark', child: Text('تیره')),
+                  ],
+                  onChanged: (v) async {
+                    if (v != null) {
+                      await AppSettings.setThemeMode(v);
+                      if (mounted) {
+                        setState(() {
+                          themeMode = v;
                           message = 'ذخیره شد';
                         });
                       }

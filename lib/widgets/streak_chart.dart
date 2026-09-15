@@ -19,7 +19,8 @@ class StreakChart extends StatelessWidget {
         ? 0
         : days.map((d) => d.count).reduce((a, b) => a > b ? a : b);
     return Card(
-      color: const Color(0xfff0ecff),
+      // Theme-aware (not hardcoded): stays readable in dark mode.
+      color: Theme.of(c).colorScheme.primaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

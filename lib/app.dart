@@ -4,33 +4,49 @@ import 'package:google_fonts/google_fonts.dart';
 import 'screens/home.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
+import 'services/settings_service.dart';
 
-class StartenWirApp extends StatelessWidget {
+class StartenWirApp extends StatefulWidget {
   const StartenWirApp({super.key});
-
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'WortSchatz',
-        locale: const Locale('fa'),
-        supportedLocales: const [
-          Locale('fa'),
-          Locale('en'),
-          Locale('de'),
-        ],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(
-                seedColor: const Color(0xff102a43),
-                brightness: Brightness.light),
-            textTheme: GoogleFonts.vazirmatnTextTheme()),
-        home: const SplashScreen(),
-      );
+  State<StartenWirApp> createState() => _AppState();
+}
+
+class _AppState extends State<StartenWirApp> {
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppSettings.theme,
+      builder: (_, mode, __) => MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'WortSchatz',
+            locale: const Locale('fa'),
+            supportedLocales: const [
+              Locale('fa'),
+              Locale('en'),
+              Locale('de'),
+            ],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: ThemeData(
+                useMaterial3: true,
+                colorScheme: ColorScheme.fromSeed(
+                    seedColor: const Color(0xff102a43),
+                    brightness: Brightness.light),
+                textTheme: GoogleFonts.vazirmatnTextTheme(
+                    ThemeData.light().textTheme)),
+            darkTheme: ThemeData(
+                useMaterial3: true,
+                colorScheme: ColorScheme.fromSeed(
+                    seedColor: const Color(0xff102a43),
+                    brightness: Brightness.dark),
+                textTheme:
+                    GoogleFonts.vazirmatnTextTheme(ThemeData.dark().textTheme)),
+            themeMode: mode,
+            home: const SplashScreen(),
+          ));
 }
 
 /// Shows a splash while the vocabulary database is being prepared,
@@ -55,6 +71,7 @@ class _SplashState extends State<SplashScreen> {
     setState(() => error = null);
     try {
       await VocabularyDb.instance.init();
+      AppSettings.theme.value = await AppSettings.themeMode;
       await NotifyService.init();
       await NotifyService.scheduleDailyReminder();
     } catch (e) {

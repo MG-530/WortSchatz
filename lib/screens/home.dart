@@ -204,11 +204,12 @@ class _DashboardState extends State<Dashboard> {
                                           fontWeight: FontWeight.bold))
                               ]))
                         ])))),
-            const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Card(
-                    color: Color(0xfff0ecff),
-                    child: Padding(
+                    // Theme-aware (not hardcoded): stays readable in dark mode.
+                    color: Theme.of(c).colorScheme.primaryContainer,
+                    child: const Padding(
                         padding: EdgeInsets.all(20),
                         child: Text(
                             'یک درس انتخاب کن، واژه‌ها را یاد بگیر و با تمرین و لایتنر تثبیت کن.',

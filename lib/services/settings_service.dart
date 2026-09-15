@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppSettings {
@@ -7,6 +7,27 @@ class AppSettings {
   /// sees the result without manual refresh.
   static final ValueNotifier<int> revision = ValueNotifier<int>(0);
   static void _bump() => revision.value++;
+
+  /// App theme, reactive so Settings changes apply instantly.
+  static final ValueNotifier<ThemeMode> theme =
+      ValueNotifier<ThemeMode>(ThemeMode.system);
+
+  static Future<ThemeMode> get themeMode async {
+    switch ((await SharedPreferences.getInstance()).getString('themeMode')) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  static Future<void> setThemeMode(String v) async {
+    await setString('themeMode', v);
+    theme.value = await themeMode;
+  }
+
   static Future<bool> get autoPlay async =>
       (await SharedPreferences.getInstance()).getBool('autoPlay') ?? true;
   static Future<bool> get onlineAudio async =>
