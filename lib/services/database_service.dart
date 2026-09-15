@@ -285,8 +285,6 @@ class VocabularyDb {
     }
   }
 
-  Future<void> initMerged() => init();
-
   Future<List<Word>> all(
       {String query = '', String? level, int? lesson, String? wordType}) async {
     var where = <String>[];
