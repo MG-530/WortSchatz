@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../widgets/header.dart';
@@ -30,10 +31,28 @@ class _WordsState extends State<WordsPage> {
     'other'
   ];
 
+  /// Debounces keystrokes so fast typing issues one query, not one per
+  /// character (each query hits SQLite).
+  Timer? _debounce;
+
   @override
   void initState() {
     super.initState();
     load();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void onQueryChanged(String v) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      q = v;
+      load();
+    });
   }
 
   Future<void> load() async {
@@ -139,10 +158,7 @@ class _WordsState extends State<WordsPage> {
                         prefixIcon: Icon(Icons.search),
                         hintText: 'German / Persian / English',
                         border: OutlineInputBorder()),
-                    onChanged: (v) {
-                      q = v;
-                      load();
-                    })),
+                    onChanged: onQueryChanged)),
             Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
