@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'screens/home.dart';
+import 'screens/onboarding_page.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
 import 'services/settings_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StartenWirApp extends StatefulWidget {
   const StartenWirApp({super.key});
@@ -80,8 +82,15 @@ class _SplashState extends State<SplashScreen> {
       return;
     }
     if (mounted) {
+      // First launch ever: show the tutorial, otherwise go to Home.
+      final seen =
+          (await SharedPreferences.getInstance()).getBool('seenOnboarding') ??
+              false;
+      if (!mounted) return;
       Navigator.pushReplacement(
-          context, MaterialPageRoute(builder: (_) => const Home()));
+          context,
+          MaterialPageRoute(
+              builder: (_) => seen ? const Home() : const OnboardingPage()));
     }
   }
 
