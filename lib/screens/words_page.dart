@@ -73,10 +73,11 @@ class _WordsState extends State<WordsPage> {
         builder: (sheet) => SafeArea(
             child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                child: SingleChildScrollView(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                       Row(children: [
                         Expanded(
                             child: Text(x.display,
@@ -115,6 +116,44 @@ class _WordsState extends State<WordsPage> {
                         Text('/${x.pronunciation}/',
                             textDirection: ui.TextDirection.ltr,
                             style: const TextStyle(color: Colors.grey)),
+                      FutureBuilder<List<Map<String, String>>>(
+                          future: VocabularyDb.instance.examplesFor(x.german),
+                          builder: (c, snap) {
+                            if (snap.connectionState != ConnectionState.done ||
+                                snap.data == null ||
+                                snap.data!.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+                            return Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('مثال‌ها',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 4),
+                                      for (final e in snap.data!)
+                                        Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 4),
+                                            child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(e['de'] ?? '',
+                                                      textDirection:
+                                                          ui.TextDirection.ltr,
+                                                      style: const TextStyle(
+                                                          fontSize: 15)),
+                                                  Text(e['fa'] ?? '',
+                                                      style: const TextStyle(
+                                                          fontSize: 13,
+                                                          color: Colors.grey)),
+                                                ])),
+                                    ]));
+                          }),
                       const SizedBox(height: 12),
                       FutureBuilder<Map<String, dynamic>?>(
                           future:
@@ -141,7 +180,7 @@ class _WordsState extends State<WordsPage> {
                                     icon: const Icon(Icons.table_chart),
                                     label: Text('صرف فعل ${data['verb']}')));
                           })
-                    ]))));
+                    ])))));
   }
 
   @override

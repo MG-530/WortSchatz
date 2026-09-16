@@ -149,6 +149,54 @@ class VocabularyDb {
     }
     await _ensureConjugations();
     await _ensurePlurals();
+    await _ensureExamples();
+  }
+
+  /// Example sentences (seeded from assets, static data). Reseeds when
+  /// the bundled word count changes, so content updates reach old DBs —
+  /// without parsing the asset on every launch (prefs-cached count).
+  Future<void> _ensureExamples() async {
+    await _db!.execute(
+        'CREATE TABLE IF NOT EXISTS examples(german TEXT, idx INTEGER, de TEXT, fa TEXT, PRIMARY KEY (german, idx))');
+    final prefs = await SharedPreferences.getInstance();
+    final wantCached = prefs.getInt('examplesAssetCount') ?? -1;
+    final haveWords = Sqflite.firstIntValue(await _db!
+            .rawQuery('SELECT COUNT(DISTINCT german) FROM examples')) ??
+        0;
+    if (wantCached != -1 && haveWords == wantCached) return;
+    final emap =
+        jsonDecode(await rootBundle.loadString('assets/examples.json'));
+    final want = (emap as Map<String, dynamic>).length;
+    if (haveWords != want) {
+      await _db!.execute('DELETE FROM examples');
+      final batch = _db!.batch();
+      emap.forEach((german, list) {
+        var i = 0;
+        for (final e in (list as List)) {
+          final m = e as Map<String, dynamic>;
+          batch.insert('examples', {
+            'german': german,
+            'idx': i,
+            'de': m['de'] ?? '',
+            'fa': m['fa'] ?? '',
+          });
+          i++;
+        }
+      });
+      await batch.commit(noResult: true);
+    }
+    await prefs.setInt('examplesAssetCount', want);
+  }
+
+  /// Up to 3 example sentences (German + Persian) for a word.
+  Future<List<Map<String, String>>> examplesFor(String german) async {
+    final rows = await _db!.rawQuery(
+        'SELECT de, fa FROM examples WHERE german = ? ORDER BY idx LIMIT 3',
+        [german]);
+    return [
+      for (final r in rows)
+        {'de': r['de'] as String? ?? '', 'fa': r['fa'] as String? ?? ''}
+    ];
   }
 
   /// Noun plurals (seeded from assets, static data — reseed-if-empty is

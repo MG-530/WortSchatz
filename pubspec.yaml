@@ -38,6 +38,7 @@ flutter:
     - assets/vocab_merged.json
     - assets/conjugations.json
     - assets/plurals.json
+    - assets/examples.json
     - assets/logo.png
     - assets/starten_wir_a1_cover.jpg
     - assets/starten_wir_a2_cover.jpg
