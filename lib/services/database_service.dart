@@ -61,13 +61,16 @@ class VocabularyDb {
     final metaDone = prefs.getInt('vocabMetaVersion') ?? 0;
     final words = <Map<String, dynamic>>[];
     var fresh = false;
+    var appendOnly = false;
     if (count != (prefs.getInt('vocabAssetCount') ?? -1) ||
         metaDone < metaVersion) {
       final raw =
           jsonDecode(await rootBundle.loadString('assets/vocab_merged.json'))
               as List;
       fresh = count != raw.length;
-      if (fresh) {
+      // Append-only growth keeps the table (DROP would wipe progress).
+      appendOnly = count > 0 && count < raw.length;
+      if (fresh && !appendOnly) {
         await _db!.execute('DROP TABLE IF EXISTS words');
         await _db!.execute(
             'CREATE TABLE words(id INTEGER PRIMARY KEY, german TEXT, display TEXT, article TEXT, persian TEXT, english TEXT, pronunciation TEXT, word_type TEXT, gender TEXT, level TEXT, lessons TEXT, box INTEGER DEFAULT 0, next_review TEXT, starred INTEGER DEFAULT 0)');
@@ -99,12 +102,26 @@ class VocabularyDb {
     }
     try {
       if (fresh) {
-        for (var chunkStart = 0; chunkStart < words.length; chunkStart += 500) {
-          final chunkEnd = (chunkStart + 500 < words.length)
-              ? chunkStart + 500
-              : words.length;
-          for (var i = chunkStart; i < chunkEnd; i++) {
+        if (appendOnly) {
+          // Append-only growth (e.g. new lessons added in an update):
+          // insert just the missing tail rows, keeping every existing
+          // row — and all Leitner progress — untouched. Ids are
+          // positional (id = index + 1), so words[count:] is the delta.
+          for (var i = count; i < words.length; i++) {
             await _db!.insert('words', words[i]);
+          }
+          debugPrint(
+              'VocabularyDb: appended ${words.length - count} new words');
+        } else {
+          for (var chunkStart = 0;
+              chunkStart < words.length;
+              chunkStart += 500) {
+            final chunkEnd = (chunkStart + 500 < words.length)
+                ? chunkStart + 500
+                : words.length;
+            for (var i = chunkStart; i < chunkEnd; i++) {
+              await _db!.insert('words', words[i]);
+            }
           }
         }
       } else if (words.isNotEmpty) {
