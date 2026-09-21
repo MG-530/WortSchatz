@@ -55,7 +55,7 @@ jobs:
             rm -f "$KS" android/app/key.properties
           fi
 
-      - run: flutter build apk --release --analyze-size
+      - run: flutter build apk --release
       - run: flutter build appbundle --release
 
       - uses: actions/upload-artifact@v5
@@ -67,3 +67,7 @@ jobs:
         with:
           name: wortschatz-aab
           path: build/app/outputs/bundle/release/app-release.aab
+
+      # Size breakdown only (arm64); runs last so it doesn't clobber
+      # the uploaded universal APK. --analyze-size needs one ABI.
+      - run: flutter build apk --release --target-platform android-arm64 --analyze-size
