@@ -55,13 +55,13 @@ jobs:
             rm -f "$KS" android/app/key.properties
           fi
 
-      - run: flutter build apk --release
+      - run: flutter build apk --release --split-per-abi
       - run: flutter build appbundle --release
 
       - uses: actions/upload-artifact@v5
         with:
           name: wortschatz-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-*-release.apk
 
       - uses: actions/upload-artifact@v5
         with:
