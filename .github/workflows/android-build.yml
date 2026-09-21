@@ -55,7 +55,7 @@ jobs:
             rm -f "$KS" android/app/key.properties
           fi
 
-      - run: flutter build apk --release
+      - run: flutter build apk --release --analyze-size
       - run: flutter build appbundle --release
 
       - uses: actions/upload-artifact@v5
