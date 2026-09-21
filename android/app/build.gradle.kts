@@ -44,6 +44,9 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
+        // Keep only the locales we actually support (drops the rest of
+        // the framework/library language resources from the APK).
+        resConfigs("en", "fa", "de")
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
         // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
@@ -54,6 +57,10 @@ android {
 
     buildTypes {
         release {
+            // Shrink + obfuscate (single revertable slimming step).
+            // If the release APK misbehaves, revert this commit.
+            isMinifyEnabled = true
+            isShrinkResources = true
             // Real keystore when key.properties exists (CI release +
             // local signed builds); otherwise debug keys so
             // `flutter run --release` keeps working.
