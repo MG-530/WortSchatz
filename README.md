@@ -1,5 +1,8 @@
 # WortSchatz
 
+![Android build](https://github.com/MG-530/WortSchatz/actions/workflows/android-build.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 A Persian-first German vocabulary trainer built with Flutter, based on the
 *Starten Wir* A1/A2 coursebooks. Learn words lesson by lesson, lock them in
 with a Leitner spaced-repetition system, and keep a daily study streak.
@@ -98,4 +101,4 @@ _TODO: add screenshots (`fastlane/` or `screenshots/`)._
 
 ## License
 
-_TODO: choose a license (e.g. MIT) and drop `LICENSE` here._
+MIT — see [LICENSE](LICENSE).
