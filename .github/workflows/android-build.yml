@@ -7,12 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  apk:
     runs-on: ubuntu-24.04
     steps:
-      # Release APKs + Gradle caches eat the ~14GB runner disk; clear
-      # the unused toolchains first (but keep Android + tool cache:
-      # the build needs the preinstalled SDK and Temurin Java).
       - uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
@@ -29,6 +26,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
 
       - uses: subosito/flutter-action@v2
         with:
@@ -53,10 +52,6 @@ jobs:
             exit 0
           fi
           echo "$KEYSTORE_BASE64" | base64 -d > "$KS"
-          # Diagnostics (public, safe to log): exact length + fingerprint
-          # of the decoded file. Compare with the known-good values to
-          # tell a broken paste apart from a wrong password.
-          echo "keystore_b64_len=${#KEYSTORE_BASE64} (want 3564)"
           if ! keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" > /dev/null 2>&1; then
             echo "::warning::STORE_PASSWORD is wrong (or the base64 paste is broken); falling back to debug signing."
             rm -f "$KS" android/app/key.properties
@@ -74,18 +69,73 @@ jobs:
           fi
 
       - run: flutter build apk --release --split-per-abi
-      - run: flutter build appbundle --release
 
       - uses: actions/upload-artifact@v5
         with:
           name: wortschatz-apk
           path: build/app/outputs/flutter-apk/app-*-release.apk
 
+  appbundle:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.4"
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Set up release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          KS=android/app/wortschatz-release.keystore
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "No keystore secret; continuing with debug signing."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$KS"
+          if ! keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" > /dev/null 2>&1; then
+            echo "::warning::STORE_PASSWORD is wrong (or the base64 paste is broken); falling back to debug signing."
+            rm -f "$KS" android/app/key.properties
+          elif ! keytool -list -alias "$KEY_ALIAS" -keystore "$KS" -storepass "$STORE_PASSWORD" 2>&1 | grep -q "PrivateKeyEntry"; then
+            echo "::warning::KEY_ALIAS is wrong (no such key in the store); falling back to debug signing."
+            rm -f "$KS" android/app/key.properties
+          elif ! openssl pkcs12 -in "$KS" -passin pass:"$STORE_PASSWORD" -nodes 2>/dev/null | grep -q "PRIVATE KEY"; then
+            echo "::warning::Key password does not match; falling back to debug signing."
+            rm -f "$KS" android/app/key.properties
+          else
+            printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=wortschatz-release.keystore\n' \
+              "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > android/app/key.properties
+            echo "Release signing enabled."
+          fi
+
+      - run: flutter build appbundle --release
+
       - uses: actions/upload-artifact@v5
         with:
           name: wortschatz-aab
           path: build/app/outputs/bundle/release/app-release.aab
-
-      # Size breakdown only (arm64); runs last so it doesn't clobber
-      # the uploaded universal APK. --analyze-size needs one ABI.
-      - run: flutter build apk --release --target-platform android-arm64 --analyze-size
