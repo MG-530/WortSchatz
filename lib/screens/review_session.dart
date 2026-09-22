@@ -15,11 +15,17 @@ class ReviewSession extends StatefulWidget {
   /// When true, the question side shows Persian (recall German) instead
   /// of German (recall meaning). Grading and streak logic are unchanged.
   final bool reverseMode;
+
+  /// When false, answers only flip through the cards (no Leitner
+  /// grading) — used for the meaning pass of sequential mode, where
+  /// the follow-up writing check does the real grading.
+  final bool gradeOnAnswer;
   const ReviewSession(
       {required this.words,
       required this.title,
       this.extra = const [],
       this.reverseMode = false,
+      this.gradeOnAnswer = true,
       super.key});
   @override
   State<ReviewSession> createState() => _ReviewSessionState();
@@ -34,6 +40,10 @@ class _ReviewSessionState extends State<ReviewSession> {
   /// extra-words session replaces this one).
   int _answered = 0;
   bool _streakRecorded = false;
+
+  /// Whether the current card was graded. Leaving the card (forward,
+  /// swipe or back) is locked until the user answers — no skipping.
+  bool _graded = false;
 
   /// Plural forms for this session's nouns (one batch query).
   Map<String, String> plurals = {};
@@ -106,8 +116,16 @@ class _ReviewSessionState extends State<ReviewSession> {
     setState(() {
       i = next;
       show = false;
+      _graded = false;
     });
     if (_audioMode == 1) _playFront();
+  }
+
+  void _denySkip() {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(const SnackBar(
+          content: Text('اول بگو بلدی یا نه، بعد برو کارت بعدی')));
   }
 
   @override
@@ -143,12 +161,15 @@ class _ReviewSessionState extends State<ReviewSession> {
                   child: GestureDetector(
                       onTap: _reveal,
                       onHorizontalDragEnd: (d) {
-                        if (d.primaryVelocity != null) {
-                          _moveTo((i +
-                                  (d.primaryVelocity! > 0 ? -1 : 1) +
-                                  widget.words.length) %
-                              widget.words.length);
+                        if (d.primaryVelocity == null) return;
+                        if (!_graded) {
+                          _denySkip();
+                          return;
                         }
+                        _moveTo((i +
+                                (d.primaryVelocity! > 0 ? -1 : 1) +
+                                widget.words.length) %
+                            widget.words.length);
                       },
                       child: SizedBox(
                           width: double.infinity,
@@ -204,23 +225,38 @@ class _ReviewSessionState extends State<ReviewSession> {
                                 ]
                               ])))))),
               const SizedBox(height: 8),
+              // Grade buttons sit right under the card (away from the
+              // system back gesture) and appear only after reveal.
+              if (show)
+                Row(children: [
+                  Expanded(
+                      child: FilledButton.icon(
+                          onPressed: () => _handleAnswer(true),
+                          icon: const Icon(Icons.check),
+                          label: const Text('بلد بودم'))),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: FilledButton.icon(
+                          onPressed: () => _handleAnswer(false),
+                          icon: const Icon(Icons.close),
+                          label: const Text('بلد نبودم')))
+                ])
+              else
+                const Text('برای دیدن جواب، کارت را لمس کن',
+                    style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 8),
               Row(children: [
                 Expanded(
                     child: OutlinedButton.icon(
                         // Back never grades — it only revisits the
                         // previous card. Meaningless for 1-word sessions.
-                        onPressed: widget.words.length <= 1 ? null : _goBack,
+                        // Locked until the current card is graded.
+                        onPressed: widget.words.length <= 1 || !_graded
+                            ? null
+                            : _goBack,
                         icon: const Icon(Icons.arrow_back),
                         label: const Text('قبلی')))
-              ]),
-              // Both grade buttons are always visible — including on
-              // the answer side — so "didn't know" is one tap away.
-              FilledButton(
-                  onPressed: () => _handleAnswer(false),
-                  child: const Text('بلد نبودم')),
-              FilledButton(
-                  onPressed: () => _handleAnswer(true),
-                  child: const Text('بلد بودم'))
+              ])
             ])));
   }
 
@@ -231,8 +267,11 @@ class _ReviewSessionState extends State<ReviewSession> {
   }
 
   void _handleAnswer(bool known) {
-    VocabularyDb.instance.grade(widget.words[i], known);
+    if (widget.gradeOnAnswer) {
+      VocabularyDb.instance.grade(widget.words[i], known);
+    }
     _answered++;
+    _graded = true;
     if (i + 1 < widget.words.length) {
       _moveTo(i + 1);
     } else {
