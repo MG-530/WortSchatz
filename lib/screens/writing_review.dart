@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import '../models/word.dart';
 import '../services/audio_service.dart';
 import '../services/database_service.dart';
@@ -22,6 +23,8 @@ class _WritingReviewState extends State<WritingReviewSession> {
   bool hint = false, checked = false, correct = false;
   final input = TextEditingController();
   final tts = FlutterTts();
+  final speech = SpeechToText();
+  bool listening = false;
   List<String> letters = [];
 
   /// Graded answers in this session + whether the streak was recorded
@@ -45,8 +48,48 @@ class _WritingReviewState extends State<WritingReviewSession> {
     if (!_streakRecorded && _graded >= StreakService.minAnswersForStreak) {
       StreakService.recordStudySession(wordsStudied: _graded);
     }
+    speech.stop();
     input.dispose();
     super.dispose();
+  }
+
+  /// Toggle German voice input: the recognized words fill the answer
+  /// field (and the chip buffer stays in sync).
+  Future<void> toggleMic() async {
+    if (listening) {
+      await speech.stop();
+      if (mounted) setState(() => listening = false);
+      return;
+    }
+    final available = await speech.initialize();
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تشخیص گفتار در دسترس نیست')));
+      }
+      return;
+    }
+    if (mounted) setState(() => listening = true);
+    await speech.listen(
+        onResult: (r) {
+          if (r.finalResult && r.recognizedWords.isNotEmpty && mounted) {
+            setState(() {
+              typed = r.recognizedWords;
+              input.text = typed;
+              input.selection = TextSelection.collapsed(offset: typed.length);
+              listening = false;
+            });
+          }
+        },
+        listenOptions:
+            SpeechListenOptions(localeId: 'de-DE', partialResults: false));
+  }
+
+  void _stopMic() {
+    if (listening) {
+      speech.stop();
+      listening = false;
+    }
   }
 
   void lettersForWord() {
@@ -84,6 +127,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
 
   Future<void> submit() async {
     if (checked) return;
+    _stopMic();
     // Compare the actual field content (not the chip-built buffer):
     // keyboard typing never updated `typed`, so every typed answer
     // used to be graded wrong.
@@ -101,6 +145,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
 
   Future<void> unknown() async {
     if (checked) return;
+    _stopMic();
     await VocabularyDb.instance.grade(w, false);
     _graded++;
     if (mounted) {
@@ -120,6 +165,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
   }
 
   void next() {
+    _stopMic();
     if (i + 1 >= widget.words.length) {
       // Natural finish of the session → record the streak.
       _streakRecorded = true;
@@ -168,10 +214,20 @@ class _WritingReviewState extends State<WritingReviewSession> {
                             labelText: 'آلمانی را تایپ کن',
                             border: OutlineInputBorder()))),
                 IconButton(
+                    tooltip: 'گفتن جواب',
+                    onPressed: checked ? null : toggleMic,
+                    icon: Icon(listening ? Icons.mic : Icons.mic_none,
+                        color: listening ? Colors.red : null)),
+                IconButton(
                     tooltip: 'پاک کردن حرف آخر',
                     onPressed: checked || typed.isEmpty ? null : backspace,
                     icon: const Icon(Icons.backspace_outlined))
               ]),
+              if (listening)
+                const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: Text('... در حال گوش دادن',
+                        style: TextStyle(color: Colors.red, fontSize: 13))),
               if (hint)
                 Wrap(spacing: 6, runSpacing: 6, children: [
                   for (final ch in letters)

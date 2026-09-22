@@ -27,6 +27,7 @@ dependencies:
   home_widget: ^0.10.0
   workmanager: ^0.10.10
   permission_handler: ^13.0.2
+  speech_to_text: ^7.5.0
 
 dev_dependencies:
   flutter_test:

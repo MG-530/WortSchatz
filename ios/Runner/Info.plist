@@ -6,7 +6,11 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
+		<key>NSMicrophoneUsageDescription</key>
+	<string>برای تمرین تلفظ و تایپ صوتی واژه‌های آلمانی</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>برای تشخیص گفتار آلمانی در تمرین نوشتاری</string>
+<key>CFBundleDisplayName</key>
 	<string>WortSchatz</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
