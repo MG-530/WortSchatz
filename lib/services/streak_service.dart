@@ -4,7 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class StreakDay {
   final DateTime date;
   final int count;
-  const StreakDay(this.date, this.count);
+
+  /// True for days after today (shown dimmed, never counted).
+  final bool future;
+  const StreakDay(this.date, this.count, [this.future = false]);
 }
 
 /// Persian weekday name from the real system date.
@@ -90,12 +93,36 @@ class StreakService {
 
   /// Last 7 days (oldest → today), each stamped with its real
   /// system-clock date so weekday labels always match reality.
-  static Future<List<StreakDay>> getLast7Days() async {
+  static Future<List<StreakDay>> getLast7Days() => getDays(7);
+
+  /// Current Persian week, Saturday → Friday. Days after today are
+  /// returned with count 0 and future=true (dimmed, never counted).
+  static Future<List<StreakDay>> getCurrentWeek() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final saturday = today.subtract(Duration(days: (today.weekday + 1) % 7));
+    final List<StreakDay> days = [];
+    for (int i = 0; i < 7; i++) {
+      final day = saturday.add(Duration(days: i));
+      final isFuture = day.isAfter(today);
+      var count = 0;
+      if (!isFuture) {
+        final key = _dateKey(day);
+        count = prefs.getInt('$_keyDailyCount$key') ?? 0;
+      }
+      days.add(StreakDay(day, count, isFuture));
+    }
+    return days;
+  }
+
+  /// Last [n] days (oldest → today) for the heatmap page.
+  static Future<List<StreakDay>> getDays(int n) async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final List<StreakDay> days = [];
 
-    for (int i = 6; i >= 0; i--) {
+    for (int i = n - 1; i >= 0; i--) {
       final day = now.subtract(Duration(days: i));
       final key = _dateKey(day);
       final count = prefs.getInt('$_keyDailyCount$key') ?? 0;

@@ -150,10 +150,13 @@ class _DashboardState extends State<Dashboard> {
     goal = await AppSettings.dailyGoal;
     final x = await VocabularyDb.instance.stats(level: level);
     final sd = await StreakService.getStreak();
-    streakDays = await StreakService.getLast7Days();
+    streakDays = await StreakService.getCurrentWeek();
     currentStreak = sd.currentStreak;
     longestStreak = sd.longestStreak;
-    todayCount = streakDays.isNotEmpty ? streakDays.last.count : 0;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    todayCount =
+        streakDays.where((d) => d.date == today).fold(0, (a, d) => a + d.count);
     if (mounted) setState(() => s = x);
   }
 

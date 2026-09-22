@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/streak_service.dart';
+import '../screens/streak_page.dart';
 
+/// Weekly streak chart (Saturday → Friday). Counts sit UNDER the bars,
+/// future days are dimmed. Tapping opens the full heatmap page.
 class StreakChart extends StatelessWidget {
   final int currentStreak;
   final int longestStreak;
@@ -15,62 +18,71 @@ class StreakChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext c) {
-    final maxBar = days.isEmpty
-        ? 0
-        : days.map((d) => d.count).reduce((a, b) => a > b ? a : b);
+    final counts = [for (final d in days) d.count];
+    final maxBar = counts.isEmpty ? 0 : counts.reduce((a, b) => a > b ? a : b);
     return Card(
       // Theme-aware (not hardcoded): stays readable in dark mode.
       color: Theme.of(c).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text('🔥 $currentStreak روز پشت سر هم',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('طولانی‌ترین: $longestStreak روز',
-                style: const TextStyle(fontSize: 14, color: Colors.grey)),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: List.generate(7, (i) {
-                final day = i < days.length
-                    ? days[i]
-                    : StreakDay(
-                        DateTime.now().subtract(Duration(days: 6 - i)), 0);
-                final count = day.count;
-                final height =
-                    maxBar > 0 ? (count / maxBar).clamp(0.1, 1.0) : 0.0;
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 60 * height,
-                      decoration: BoxDecoration(
-                        color: count > 0
-                            ? Colors.deepPurple
-                            : Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: count > 0
-                          ? Center(
-                              child: Text('$count',
-                                  style: const TextStyle(
-                                      fontSize: 10, color: Colors.white)))
-                          : null,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => Navigator.push(
+            c, MaterialPageRoute(builder: (_) => const StreakPage())),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Text('🔥 $currentStreak روز پشت سر هم',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text('طولانی‌ترین: $longestStreak روز',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey)),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: List.generate(7, (i) {
+                  final day = i < days.length
+                      ? days[i]
+                      : StreakDay(
+                          DateTime.now().subtract(Duration(days: 6 - i)),
+                          0,
+                          true);
+                  final count = day.count;
+                  final height =
+                      maxBar > 0 ? (count / maxBar).clamp(0.1, 1.0) : 0.0;
+                  final dimmed = day.future;
+                  return Opacity(
+                    opacity: dimmed ? 0.35 : 1.0,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 60 * height,
+                          decoration: BoxDecoration(
+                            color: count > 0
+                                ? Colors.deepPurple
+                                : Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text('$count',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: count > 0
+                                    ? Theme.of(c).colorScheme.primary
+                                    : Colors.grey)),
+                        Text(weekdayFa(day.date),
+                            style: const TextStyle(fontSize: 10)),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    // Real weekday of that date (system clock),
-                    // never a hardcoded Saturday-first list.
-                    Text(weekdayFa(day.date),
-                        style: const TextStyle(fontSize: 10)),
-                  ],
-                );
-              }),
-            ),
-          ],
+                  );
+                }),
+              ),
+            ],
+          ),
         ),
       ),
     );
