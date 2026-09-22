@@ -6,6 +6,8 @@ import 'screens/onboarding_page.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
 import 'services/settings_service.dart';
+import 'services/widget_service.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StartenWirApp extends StatefulWidget {
@@ -76,6 +78,7 @@ class _SplashState extends State<SplashScreen> {
       AppSettings.theme.value = await AppSettings.themeMode;
       await NotifyService.init();
       await NotifyService.scheduleDailyReminder();
+      await WidgetService.refresh();
     } catch (e) {
       debugPrint('DB init failed: $e');
       if (mounted) setState(() => error = e.toString());
@@ -86,11 +89,22 @@ class _SplashState extends State<SplashScreen> {
       final seen =
           (await SharedPreferences.getInstance()).getBool('seenOnboarding') ??
               false;
+      // Widget deep link (e.g. the review button): open Review tab.
+      var tab = 0;
+      try {
+        final uri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+        if (uri != null && (uri.host == 'review' || uri.path == '/review')) {
+          tab = 2;
+        }
+      } catch (_) {
+        // Not supported on this platform; ignore.
+      }
       if (!mounted) return;
       Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (_) => seen ? const Home() : const OnboardingPage()));
+              builder: (_) =>
+                  seen ? Home(initialTab: tab) : const OnboardingPage()));
     }
   }
 

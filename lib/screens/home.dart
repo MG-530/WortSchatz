@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
 import '../widgets/streak_chart.dart';
 import '../services/streak_service.dart';
 import '../widgets/stat_card.dart';
@@ -11,13 +13,16 @@ import 'words_page.dart';
 import 'settings_page.dart';
 
 class Home extends StatefulWidget {
-  const Home({super.key});
+  /// Tab to open first (used by the widget "review" deep link).
+  final int initialTab;
+  const Home({super.key, this.initialTab = 0});
   @override
   State<Home> createState() => _HomeState();
 }
 
 class _HomeState extends State<Home> {
-  int tab = 0;
+  late int tab;
+  StreamSubscription<Uri?>? _widgetClicks;
   int _dashSeed = 0, _lessSeed = 0, _revSeed = 0;
   // Tabs are rebuilt (fresh key) whenever selected, so DB changes made
   // elsewhere (add/reset/grading in another tab or Settings) are always
@@ -33,12 +38,29 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    tab = widget.initialTab;
     AppSettings.revision.addListener(_onSettingsChanged);
+    // Widget taps while the app is alive (e.g. the review button).
+    try {
+      _widgetClicks = HomeWidget.widgetClicked.listen((uri) {
+        if (uri != null && (uri.host == 'review' || uri.path == '/review')) {
+          if (mounted) {
+            setState(() {
+              tab = 2;
+              _revSeed++;
+            });
+          }
+        }
+      }, onError: (_) {});
+    } catch (_) {
+      // Not supported on this platform; ignore.
+    }
   }
 
   @override
   void dispose() {
     AppSettings.revision.removeListener(_onSettingsChanged);
+    _widgetClicks?.cancel();
     super.dispose();
   }
 
