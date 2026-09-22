@@ -17,7 +17,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsState extends State<SettingsPage> {
-  bool auto = true, online = false, articleTts = true;
+  bool auto = true, articleTts = true;
   int goal = 10, leitnerAudio = 0;
   String themeMode = 'system';
   String time = '20:00', level = 'A1', message = '';
@@ -33,7 +33,6 @@ class _SettingsState extends State<SettingsPage> {
     if (!mounted) return;
     setState(() {
       auto = p.getBool('autoPlay') ?? true;
-      online = p.getBool('onlineAudio') ?? false;
       articleTts = p.getBool('articleTts') ?? true;
       goal = p.getInt('dailyGoal') ?? 10;
       leitnerAudio = p.getInt('leitnerAudio') ?? 0;
@@ -48,7 +47,6 @@ class _SettingsState extends State<SettingsPage> {
     if (mounted) {
       setState(() {
         if (k == 'autoPlay') auto = v;
-        if (k == 'onlineAudio') online = v;
         if (k == 'articleTts') articleTts = v;
         message = 'ذخیره شد';
       });
@@ -161,7 +159,7 @@ class _SettingsState extends State<SettingsPage> {
   Widget build(BuildContext c) => Scaffold(
         appBar: AppBar(title: const Text('تنظیمات')),
         body: ListView(children: [
-          const Header('انتخاب سطح'),
+          const Header('سطح و هدف روزانه'),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: DropdownButtonFormField<String>(
@@ -178,17 +176,38 @@ class _SettingsState extends State<SettingsPage> {
                       textSet('level', v);
                     }
                   })),
-          const Divider(),
+          const SizedBox(height: 4),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: DropdownButtonFormField<int>(
+                  key: ValueKey('goal-$goal'),
+                  initialValue: goal,
+                  decoration:
+                      const InputDecoration(labelText: 'هدف روزانه (واژه)'),
+                  items: const [
+                    DropdownMenuItem(value: 5, child: Text('5 واژه')),
+                    DropdownMenuItem(value: 10, child: Text('10 واژه')),
+                    DropdownMenuItem(value: 15, child: Text('15 واژه')),
+                    DropdownMenuItem(value: 20, child: Text('20 واژه')),
+                    DropdownMenuItem(value: 30, child: Text('30 واژه')),
+                    DropdownMenuItem(value: 50, child: Text('50 واژه')),
+                  ],
+                  onChanged: (v) async {
+                    if (v != null) {
+                      await AppSettings.setInt('dailyGoal', v);
+                      if (mounted) {
+                        setState(() {
+                          goal = v;
+                          message = 'ذخیره شد';
+                        });
+                      }
+                    }
+                  })),
+          const Header('صدا'),
           SwitchListTile(
               title: const Text('پخش خودکار صدا در یادگیری'),
               value: auto,
               onChanged: (v) => boolSet('autoPlay', v)),
-          SwitchListTile(
-              title: const Text('استفاده از تلفظ آنلاین'),
-              subtitle: const Text(
-                  'در صورت نبود اینترنت، تلفظ آفلاین استفاده می‌شود'),
-              value: online,
-              onChanged: (v) => boolSet('onlineAudio', v)),
           SwitchListTile(
               title: const Text('تلفظ همراه با ارتیکل'),
               subtitle: const Text('روشن: «der Apfel» — خاموش: فقط «Apfel»'),
@@ -218,6 +237,7 @@ class _SettingsState extends State<SettingsPage> {
                       }
                     }
                   })),
+          const Header('یادآوری و ظاهر'),
           ListTile(
               title: const Text('زمان یادآوری مرور'),
               subtitle: Text(time),
@@ -225,40 +245,18 @@ class _SettingsState extends State<SettingsPage> {
               onTap: pick),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: DropdownButtonFormField<int>(
-                  key: ValueKey('goal-$goal'),
-                  initialValue: goal,
-                  decoration:
-                      const InputDecoration(labelText: 'هدف روزانه (واژه)'),
-                  items: const [
-                    DropdownMenuItem(value: 5, child: Text('5 واژه')),
-                    DropdownMenuItem(value: 10, child: Text('10 واژه')),
-                    DropdownMenuItem(value: 15, child: Text('15 واژه')),
-                    DropdownMenuItem(value: 20, child: Text('20 واژه')),
-                    DropdownMenuItem(value: 30, child: Text('30 واژه')),
-                    DropdownMenuItem(value: 50, child: Text('50 واژه')),
-                  ],
-                  onChanged: (v) async {
-                    if (v != null) {
-                      await AppSettings.setInt('dailyGoal', v);
-                      if (mounted) {
-                        setState(() {
-                          goal = v;
-                          message = 'ذخیره شد';
-                        });
-                      }
-                    }
-                  })),
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: DropdownButtonFormField<String>(
                   key: ValueKey('theme-$themeMode'),
                   initialValue: themeMode,
-                  decoration: const InputDecoration(labelText: 'پوسته برنامه'),
+                  decoration:
+                      const InputDecoration(labelText: 'پوسته برنامه'),
                   items: const [
-                    DropdownMenuItem(value: 'system', child: Text('سیستم')),
-                    DropdownMenuItem(value: 'light', child: Text('روشن')),
-                    DropdownMenuItem(value: 'dark', child: Text('تیره')),
+                    DropdownMenuItem(
+                        value: 'system', child: Text('سیستم')),
+                    DropdownMenuItem(
+                        value: 'light', child: Text('روشن')),
+                    DropdownMenuItem(
+                        value: 'dark', child: Text('تیره')),
                   ],
                   onChanged: (v) async {
                     if (v != null) {
@@ -271,7 +269,6 @@ class _SettingsState extends State<SettingsPage> {
                       }
                     }
                   })),
-          const Header('پیشرفت و بکاپ'),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: FilledButton.icon(

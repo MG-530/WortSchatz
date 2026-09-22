@@ -17,7 +17,7 @@ class LearnSession extends StatefulWidget {
 
 class _LearnState extends State<LearnSession> {
   int index = 0;
-  bool revealed = false, auto = true, online = false;
+  bool revealed = false, auto = true;
 
   /// Distinct cards the user actually viewed in this session.
   /// Study-only page: no grading here. Leaving counts toward the streak
@@ -32,9 +32,8 @@ class _LearnState extends State<LearnSession> {
 
   Future<void> init() async {
     auto = await AppSettings.autoPlay;
-    online = await AppSettings.onlineAudio;
     if (auto && widget.words.isNotEmpty) {
-      playWord(widget.words[0], online: online);
+      playWord(widget.words[0]);
     }
     if (mounted) setState(() {});
   }
@@ -46,7 +45,7 @@ class _LearnState extends State<LearnSession> {
       revealed = false;
       _seen.add(index);
     });
-    if (auto) playWord(widget.words[index], online: online);
+    if (auto) playWord(widget.words[index]);
   }
 
   @override
@@ -124,7 +123,7 @@ class _LearnState extends State<LearnSession> {
                     icon: const Icon(Icons.arrow_forward),
                     label: const Text('بعدی')),
                 IconButton.filledTonal(
-                    onPressed: () => playWord(w, online: online),
+                    onPressed: () => playWord(w),
                     icon: const Icon(Icons.volume_up)),
                 FilledButton.icon(
                     onPressed: () => move(-1),

@@ -54,7 +54,6 @@ class _ReviewSessionState extends State<ReviewSession> {
 
   /// Leitner audio mode (0 = silent, 1 = front + back, 2 = back only).
   int _audioMode = 0;
-  bool _onlineAudio = false;
 
   @override
   void initState() {
@@ -75,7 +74,6 @@ class _ReviewSessionState extends State<ReviewSession> {
 
   Future<void> _loadAudio() async {
     _audioMode = await AppSettings.leitnerAudio;
-    _onlineAudio = await AppSettings.onlineAudio;
     if (_audioMode == 1 && mounted && widget.words.isNotEmpty) {
       _playFront();
     }
@@ -84,13 +82,13 @@ class _ReviewSessionState extends State<ReviewSession> {
   void _playFront() {
     if (widget.words.isEmpty) return;
     // Bare word only: a spoken article would leak the gender hint.
-    playWord(widget.words[i], online: _onlineAudio, withArticle: false);
+    playWord(widget.words[i], withArticle: false);
   }
 
   void _playBack() {
     if (widget.words.isEmpty) return;
     // Full form; the article follows the articleTts setting.
-    playWord(widget.words[i], online: _onlineAudio);
+    playWord(widget.words[i]);
   }
 
   Future<void> _toggleStar() async {
