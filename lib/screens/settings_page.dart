@@ -245,18 +245,27 @@ class _SettingsState extends State<SettingsPage> {
               onTap: pick),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final ok = await NotifyService.showTest();
+                    if (mounted) {
+                      setState(() => message = ok
+                          ? 'نوتیف آزمایشی تا ۱۰ ثانیه دیگر می‌آید'
+                          : 'نوتیف در این دستگاه پشتیبانی نمی‌شود');
+                    }
+                  },
+                  icon: const Icon(Icons.notification_add_outlined),
+                  label: const Text('ارسال نوتیف آزمایشی'))),
+          Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: DropdownButtonFormField<String>(
                   key: ValueKey('theme-$themeMode'),
                   initialValue: themeMode,
-                  decoration:
-                      const InputDecoration(labelText: 'پوسته برنامه'),
+                  decoration: const InputDecoration(labelText: 'پوسته برنامه'),
                   items: const [
-                    DropdownMenuItem(
-                        value: 'system', child: Text('سیستم')),
-                    DropdownMenuItem(
-                        value: 'light', child: Text('روشن')),
-                    DropdownMenuItem(
-                        value: 'dark', child: Text('تیره')),
+                    DropdownMenuItem(value: 'system', child: Text('سیستم')),
+                    DropdownMenuItem(value: 'light', child: Text('روشن')),
+                    DropdownMenuItem(value: 'dark', child: Text('تیره')),
                   ],
                   onChanged: (v) async {
                     if (v != null) {

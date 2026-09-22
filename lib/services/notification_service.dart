@@ -43,6 +43,31 @@ class NotifyService {
     }
   }
 
+  /// One-shot test notification in 10 seconds, for on-device
+  /// diagnosis (permission / battery / scheduling). Returns false when
+  /// notifications are unavailable here.
+  static Future<bool> showTest() async {
+    if (!_ready) return false;
+    try {
+      const details = NotificationDetails(
+          android: AndroidNotificationDetails('daily_review', 'یادآوری مرور',
+              importance: Importance.max, priority: Priority.high),
+          iOS: DarwinNotificationDetails());
+      await _plugin.zonedSchedule(
+          id: _dailyId + 1,
+          title: 'تست یادآوری 🔔',
+          body: 'اگه این رو می‌بینی، یادآوری روزانه هم کار می‌کند.',
+          scheduledDate:
+              tz.TZDateTime.now(tz.local).add(const Duration(seconds: 10)),
+          notificationDetails: details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle);
+      return true;
+    } catch (e) {
+      debugPrint('notify test failed: $e');
+      return false;
+    }
+  }
+
   /// (Re)schedule the daily reminder at the user's chosen time.
   /// Called on every boot and whenever the reminder time changes.
   static Future<void> scheduleDailyReminder() async {
