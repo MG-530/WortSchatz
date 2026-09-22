@@ -8,7 +8,9 @@ plugins {
 
 android {
     namespace = "com.wortschatz.app"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler v13 needs API 37; newer than flutter.compileSdkVersion.
+    // targetSdk stays on the Flutter default (safe to separate the two).
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
