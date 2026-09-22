@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/header.dart';
 import '../services/database_service.dart';
 import '../services/notification_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/settings_service.dart';
 import '../services/streak_service.dart';
 
@@ -68,6 +69,11 @@ class _SettingsState extends State<SettingsPage> {
           '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
       await textSet('reminder', time);
       await NotifyService.scheduleDailyReminder();
+      final allowed = await NotifyService.ensurePermission();
+      if (!allowed && mounted) {
+        setState(() => message =
+            'یادآوری ثبت شد ولی دسترسی نوتیفیکیشن داده نشده — از تنظیمات گوشی فعالش کن');
+      }
     }
   }
 
@@ -247,6 +253,27 @@ class _SettingsState extends State<SettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: OutlinedButton.icon(
                   onPressed: () async {
+                    final allowed = await NotifyService.ensurePermission();
+                    if (!allowed && mounted) {
+                      final open = await showDialog<bool>(
+                          context: context,
+                          builder: (d) => AlertDialog(
+                                  title:
+                                      const Text('دسترسی نوتیفیکیشن لازم است'),
+                                  content: const Text(
+                                      'بدون این دسترسی هیچ یادآوری نمی‌آید. از تنظیمات گوشی فعالش کن.'),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(d, false),
+                                        child: const Text('بعداً')),
+                                    FilledButton(
+                                        onPressed: () => Navigator.pop(d, true),
+                                        child: const Text('باز کردن تنظیمات'))
+                                  ]));
+                      if (open == true) await openAppSettings();
+                      return;
+                    }
                     final ok = await NotifyService.showTest();
                     if (mounted) {
                       setState(() => message = ok

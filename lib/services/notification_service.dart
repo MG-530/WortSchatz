@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import 'database_service.dart';
@@ -31,15 +32,24 @@ class NotifyService {
       const ios = DarwinInitializationSettings();
       await _plugin.initialize(
           settings: const InitializationSettings(android: android, iOS: ios));
-      if (Platform.isAndroid) {
-        await _plugin
-            .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>()
-            ?.requestNotificationsPermission();
-      }
       _ready = true;
     } catch (e) {
       debugPrint('notify init failed: $e');
+    }
+  }
+
+  /// Check notification permission, requesting it if needed.
+  /// Returns true when notifications are (now) allowed.
+  static Future<bool> ensurePermission() async {
+    if (!supported) return false;
+    try {
+      var status = await Permission.notification.status;
+      if (status.isGranted || status.isLimited) return true;
+      status = await Permission.notification.request();
+      return status.isGranted || status.isLimited;
+    } catch (e) {
+      debugPrint('notify permission failed: $e');
+      return false;
     }
   }
 
