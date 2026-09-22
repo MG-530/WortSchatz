@@ -10,16 +10,6 @@ jobs:
   apk:
     runs-on: ubuntu-24.04
     steps:
-      - uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: false
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false
-
       - uses: actions/checkout@v5
 
       - uses: actions/setup-java@v5
@@ -78,16 +68,6 @@ jobs:
   appbundle:
     runs-on: ubuntu-24.04
     steps:
-      - uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: false
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false
-
       - uses: actions/checkout@v5
 
       # Background resource monitor: if the build gets killed again,
