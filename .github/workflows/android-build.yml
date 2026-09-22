@@ -44,19 +44,21 @@ jobs:
           # of the decoded file. Compare with the known-good values to
           # tell a broken paste apart from a wrong password.
           echo "keystore_b64_len=${#KEYSTORE_BASE64} (want 3564)"
-          keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" 2>&1 | grep -E "Alias|SHA-256|Entry type" || true
-          echo "(want fingerprint D1:43:B4:AD:CE:0F:E0:C2:5E:84:65:B4:2F:25:20:6B:02:2D:D2:86:E1:02:D3:8A:D0:1D:F3:6F:57:8E:BE:57)"
-          # Verify alias + store password via openssl (works on PKCS12,
-          # unlike keytool -keypasswd). Anything off falls back to
-          # debug signing instead of failing the build.
-          if keytool -list -alias "$KEY_ALIAS" -keystore "$KS" -storepass "$STORE_PASSWORD" > /dev/null 2>&1 \
-            && openssl pkcs12 -in "$KS" -passin pass:"$STORE_PASSWORD" -nodes 2>/dev/null | grep -q "PRIVATE KEY"; then
+          if ! keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" > /dev/null 2>&1; then
+            echo "::warning::STORE_PASSWORD is wrong (or the base64 paste is broken); falling back to debug signing."
+            rm -f "$KS" android/app/key.properties
+          elif ! keytool -list -alias "$KEY_ALIAS" -keystore "$KS" -storepass "$STORE_PASSWORD" 2>&1 | grep -q "PrivateKeyEntry"; then
+            echo "::warning::KEY_ALIAS is wrong (no such key in the store); falling back to debug signing."
+            rm -f "$KS" android/app/key.properties
+          elif ! openssl pkcs12 -in "$KS" -passin pass:"$STORE_PASSWORD" -nodes 2>/dev/null | grep -q "PRIVATE KEY"; then
+            echo "::warning::Key password does not match; falling back to debug signing."
+            rm -f "$KS" android/app/key.properties
+          else
+            keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" 2>&1 | grep -E "SHA-256" || true
+            echo "(want fingerprint D1:43:B4:AD:CE:0F:E0:C2:5E:84:65:B4:2F:25:20:6B:02:2D:D2:86:E1:02:D3:8A:D0:1D:F3:6F:57:8E:BE:57)"
             printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=wortschatz-release.keystore\n' \
               "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > android/app/key.properties
             echo "Release signing enabled."
-          else
-            echo "::warning::Keystore verification failed (broken base64, wrong alias or wrong password); falling back to debug signing."
-            rm -f "$KS" android/app/key.properties
           fi
 
       - run: flutter build apk --release --split-per-abi
