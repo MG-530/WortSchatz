@@ -3,7 +3,19 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:workmanager/workmanager.dart';
 import 'app.dart';
+import 'services/widget_service.dart';
+
+/// Background entry point: refreshes the home-screen widgets
+/// (word of the day, stats, streak) without opening the app.
+@pragma('vm:entry-point')
+void widgetCallbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    await WidgetService.refresh();
+    return Future.value(true);
+  });
+}
 
 void main() {
   runZonedGuarded(() async {
@@ -37,6 +49,19 @@ void main() {
     if (!kIsWeb &&
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
       databaseFactory = databaseFactoryFfi;
+    }
+
+    // Periodic widget refresh (Android only; inexact ~6h cadence).
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        await Workmanager().initialize(widgetCallbackDispatcher);
+        await Workmanager().registerPeriodicTask(
+            'wortschatz-widget', 'refreshWidget',
+            frequency: const Duration(hours: 6),
+            existingWorkPolicy: ExistingPeriodicWorkPolicy.replace);
+      } catch (e) {
+        debugPrint('workmanager setup failed: $e');
+      }
     }
 
     runApp(const StartenWirApp());
