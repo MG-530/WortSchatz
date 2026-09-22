@@ -133,6 +133,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
     // used to be graded wrong.
     final ok = w.matchesSpelling(input.text);
     await VocabularyDb.instance.grade(w, ok);
+    await StreakService.recordAnswer(correct: ok);
     _graded++;
     if (mounted) {
       setState(() {
@@ -147,6 +148,7 @@ class _WritingReviewState extends State<WritingReviewSession> {
     if (checked) return;
     _stopMic();
     await VocabularyDb.instance.grade(w, false);
+    await StreakService.recordAnswer(correct: false);
     _graded++;
     if (mounted) {
       setState(() {

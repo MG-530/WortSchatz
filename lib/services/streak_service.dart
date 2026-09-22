@@ -131,6 +131,34 @@ class StreakService {
     return days;
   }
 
+  /// Answer-level accuracy tracking (global + today). Called with the
+  /// outcome of every graded answer (review, writing, quiz, practice).
+  static Future<void> recordAnswer({required bool correct}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _dateKey(DateTime.now());
+    await prefs.setInt('answerTotal', (prefs.getInt('answerTotal') ?? 0) + 1);
+    await prefs.setInt(
+        'answersTotal_$key', (prefs.getInt('answersTotal_$key') ?? 0) + 1);
+    if (correct) {
+      await prefs.setInt(
+          'answerCorrect', (prefs.getInt('answerCorrect') ?? 0) + 1);
+      await prefs.setInt('answersCorrect_$key',
+          (prefs.getInt('answersCorrect_$key') ?? 0) + 1);
+    }
+  }
+
+  static Future<({int total, int correct, int todayTotal, int todayCorrect})>
+      answerStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _dateKey(DateTime.now());
+    return (
+      total: prefs.getInt('answerTotal') ?? 0,
+      correct: prefs.getInt('answerCorrect') ?? 0,
+      todayTotal: prefs.getInt('answersTotal_$key') ?? 0,
+      todayCorrect: prefs.getInt('answersCorrect_$key') ?? 0,
+    );
+  }
+
   static Future<void> reset() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyStreak);

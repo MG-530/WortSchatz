@@ -269,6 +269,7 @@ class _ReviewSessionState extends State<ReviewSession> {
     if (widget.gradeOnAnswer) {
       VocabularyDb.instance.grade(widget.words[i], known);
     }
+    StreakService.recordAnswer(correct: known);
     _answered++;
     _graded = true;
     if (i + 1 < widget.words.length) {

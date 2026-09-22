@@ -82,6 +82,7 @@ class _ArticleQuizState extends State<ArticleQuizPage> {
   void pick(String a) {
     if (locked || x == null) return;
     final ok = a == x!.article;
+    StreakService.recordAnswer(correct: ok);
     setState(() {
       locked = true;
       picked = a;

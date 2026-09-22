@@ -11,6 +11,7 @@ import 'lessons_page.dart';
 import 'review_page.dart';
 import 'words_page.dart';
 import 'settings_page.dart';
+import 'stats_page.dart';
 
 class Home extends StatefulWidget {
   /// Tab to open first (used by the widget "review" deep link).
@@ -269,5 +270,16 @@ class _DashboardState extends State<Dashboard> {
                       StatCard('جدید', '${s['fresh'] ?? 0}', Icons.fiber_new),
                       StatCard('آماده مرور', '${s['due'] ?? 0}', Icons.today)
                     ])),
+            Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                        onPressed: () => Navigator.push(
+                            c,
+                            MaterialPageRoute(
+                                builder: (_) => const StatsPage())),
+                        icon: const Icon(Icons.insights_outlined),
+                        label: const Text('آمار کامل')))),
           ])));
 }
