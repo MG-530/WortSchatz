@@ -41,16 +41,20 @@ class _StreakPageState extends State<StreakPage> {
     });
   }
 
-  Color cellColor(BuildContext c, int count) {
+  Color cellColor(BuildContext c, int count, int max) {
     if (count <= 0) {
       return Theme.of(c).brightness == Brightness.dark
           ? Colors.white12
           : Colors.grey.shade300;
     }
-    if (count <= 2) return Colors.deepPurple.shade100;
-    if (count <= 5) return Colors.deepPurple.shade300;
-    if (count <= 9) return Colors.deepPurple.shade500;
-    return Colors.deepPurple.shade700;
+    // Same hue, clearly stepped opacity — visible on any screen.
+    const steps = [0.25, 0.45, 0.65, 0.85, 1.0];
+    final idx = max <= 0
+        ? 0
+        : ((count / max) * (steps.length - 1))
+            .round()
+            .clamp(0, steps.length - 1);
+    return Colors.deepPurple.withValues(alpha: steps[idx]);
   }
 
   @override
@@ -60,6 +64,10 @@ class _StreakPageState extends State<StreakPage> {
     final weeks = <List<StreakDay>>[];
     for (var i = 0; i < days.length; i += 7) {
       weeks.add(days.sublist(i, (i + 7).clamp(0, days.length)));
+    }
+    var peak = 0;
+    for (final d in days) {
+      if (d.count > peak) peak = d.count;
     }
     return Scaffold(
         appBar: AppBar(title: const Text('فعالیت‌ها')),
@@ -108,7 +116,7 @@ class _StreakPageState extends State<StreakPage> {
                                     margin: const EdgeInsets.all(2),
                                     decoration: BoxDecoration(
                                         color: r < week.length
-                                            ? cellColor(c, week[r].count)
+                                            ? cellColor(c, week[r].count, peak)
                                             : Colors.transparent,
                                         borderRadius: BorderRadius.circular(4)),
                                     alignment: Alignment.center,

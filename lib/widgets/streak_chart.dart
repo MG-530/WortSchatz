@@ -40,6 +40,7 @@ class StreakChart extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: List.generate(7, (i) {
                   final day = i < days.length
                       ? days[i]
@@ -48,32 +49,38 @@ class StreakChart extends StatelessWidget {
                           0,
                           true);
                   final count = day.count;
-                  final height =
-                      maxBar > 0 ? (count / maxBar).clamp(0.1, 1.0) : 0.0;
+                  // Height differs by count; color deepens with it.
+                  // The bar area has a fixed height so every row
+                  // (count + weekday) sits on the same baseline.
+                  final fraction =
+                      maxBar > 0 ? (count / maxBar).clamp(0.0, 1.0) : 0.0;
                   final dimmed = day.future;
                   return Opacity(
                     opacity: dimmed ? 0.35 : 1.0,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 28,
-                          height: 60 * height,
-                          decoration: BoxDecoration(
-                            color: count > 0
-                                ? Colors.deepPurple
-                                : Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(4),
+                        SizedBox(
+                          height: 64,
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              width: 28,
+                              height: count > 0 ? (12 + 52 * fraction) : 6,
+                              decoration: BoxDecoration(
+                                color: count > 0
+                                    ? Colors.deepPurple.withValues(
+                                        alpha: 0.25 + 0.75 * fraction)
+                                    : Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text('$count',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: count > 0
-                                    ? Theme.of(c).colorScheme.primary
-                                    : Colors.grey)),
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold)),
                         Text(weekdayFa(day.date),
                             style: const TextStyle(fontSize: 10)),
                       ],
