@@ -10,6 +10,19 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
+      # Release APKs + Gradle caches eat the ~14GB runner disk; clear
+      # the unused toolchains first (but keep Android + tool cache:
+      # the build needs the preinstalled SDK and Temurin Java).
+      - uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - uses: actions/checkout@v5
 
       - uses: actions/setup-java@v5
