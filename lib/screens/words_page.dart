@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/header.dart';
 import '../services/database_service.dart';
 import '../models/word.dart';
@@ -22,6 +23,8 @@ class _WordsState extends State<WordsPage> {
   int lesson = 0;
   String wordType = 'all';
 
+  final searchCtl = TextEditingController();
+
   static const List<String> wordTypes = [
     'all',
     'noun',
@@ -38,12 +41,36 @@ class _WordsState extends State<WordsPage> {
   @override
   void initState() {
     super.initState();
+    _init();
+  }
+
+  /// Restore last session's filters (they persist until the app is
+  /// closed and beyond — SharedPreferences survives restarts too).
+  Future<void> _init() async {
+    final p = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      level = p.getString('wordsLevel') ?? 'all';
+      lesson = p.getInt('wordsLesson') ?? 0;
+      wordType = p.getString('wordsType') ?? 'all';
+      q = p.getString('wordsQuery') ?? '';
+      searchCtl.text = q;
+    });
     load();
+  }
+
+  Future<void> _saveFilters() async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString('wordsLevel', level);
+    await p.setInt('wordsLesson', lesson);
+    await p.setString('wordsType', wordType);
+    await p.setString('wordsQuery', q);
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    searchCtl.dispose();
     super.dispose();
   }
 
@@ -51,6 +78,7 @@ class _WordsState extends State<WordsPage> {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 400), () {
       q = v;
+      _saveFilters();
       load();
     });
   }
@@ -192,6 +220,7 @@ class _WordsState extends State<WordsPage> {
             Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: TextField(
+                    controller: searchCtl,
                     textDirection: ui.TextDirection.ltr,
                     decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.search),
@@ -203,6 +232,7 @@ class _WordsState extends State<WordsPage> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
                   DropdownButtonFormField<String>(
+                    key: ValueKey('wlevel-$level'),
                     initialValue: level,
                     decoration: const InputDecoration(
                       labelText: 'سطح',
@@ -219,11 +249,13 @@ class _WordsState extends State<WordsPage> {
                     onChanged: (v) {
                       if (v != null) {
                         level = v;
+                        _saveFilters();
                         load();
                       }
                     },
                   ),
                   DropdownButtonFormField<int>(
+                    key: ValueKey('wlesson-$lesson'),
                     initialValue: lesson,
                     decoration: const InputDecoration(
                       labelText: 'درس',
@@ -240,11 +272,13 @@ class _WordsState extends State<WordsPage> {
                     onChanged: (v) {
                       if (v != null) {
                         lesson = v;
+                        _saveFilters();
                         load();
                       }
                     },
                   ),
                   DropdownButtonFormField<String>(
+                    key: ValueKey('wtype-$wordType'),
                     initialValue: wordType,
                     decoration: const InputDecoration(
                       labelText: 'نوع',
@@ -260,6 +294,7 @@ class _WordsState extends State<WordsPage> {
                     onChanged: (v) {
                       if (v != null) {
                         wordType = v;
+                        _saveFilters();
                         load();
                       }
                     },

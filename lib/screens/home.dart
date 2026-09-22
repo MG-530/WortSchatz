@@ -160,6 +160,29 @@ class _DashboardState extends State<Dashboard> {
   double get goalProgress =>
       goal <= 0 ? 0 : (todayCount / goal).clamp(0.0, 1.0);
 
+  /// Change the active level right from the dashboard chip.
+  /// Persisting routes through AppSettings, so the revision bump
+  /// rebuilds every tab and the result is visible immediately.
+  Future<void> _changeLevel() async {
+    const levels = ['A1', 'A2'];
+    final picked = await showDialog<String>(
+        context: context,
+        builder: (d) =>
+            SimpleDialog(title: const Text('انتخاب سطح'), children: [
+              for (final l in levels)
+                SimpleDialogOption(
+                    onPressed: () => Navigator.pop(d, l),
+                    child: Row(children: [
+                      if (l == level) const Icon(Icons.check, size: 20),
+                      if (l == level) const SizedBox(width: 8),
+                      Text(l, style: const TextStyle(fontSize: 18)),
+                    ]))
+            ]));
+    if (picked != null && picked != level && mounted) {
+      await AppSettings.setString('level', picked);
+    }
+  }
+
   @override
   Widget build(BuildContext c) => SafeArea(
       child: RefreshIndicator(
@@ -179,9 +202,10 @@ class _DashboardState extends State<Dashboard> {
                       const Text('یادگیری آلمانی با مرور هوشمند',
                           style: TextStyle(color: Colors.grey)),
                       const SizedBox(height: 4),
-                      Chip(
+                      ActionChip(
                           label: Text('سطح فعال: $level'),
-                          visualDensity: VisualDensity.compact),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: _changeLevel),
                     ])),
             Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
