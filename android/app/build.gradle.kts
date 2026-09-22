@@ -27,6 +27,15 @@ android {
     }
 
     signingConfigs {
+        // Fixed debug key (committed on purpose: debug keys are public
+        // by design). Every CI build shares this signature, so test
+        // APKs update cleanly instead of conflicting.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             if (keystorePropertiesFile.exists()) {
                 keyAlias = keystoreProperties["keyAlias"] as String

@@ -40,6 +40,12 @@ jobs:
             exit 0
           fi
           echo "$KEYSTORE_BASE64" | base64 -d > "$KS"
+          # Diagnostics (public, safe to log): exact length + fingerprint
+          # of the decoded file. Compare with the known-good values to
+          # tell a broken paste apart from a wrong password.
+          echo "keystore_b64_len=${#KEYSTORE_BASE64} (want 3564)"
+          keytool -list -keystore "$KS" -storepass "$STORE_PASSWORD" 2>&1 | grep -E "Alias|SHA-256|Entry type" || true
+          echo "(want fingerprint D1:43:B4:AD:CE:0F:E0:C2:5E:84:65:B4:2F:25:20:6B:02:2D:D2:86:E1:02:D3:8A:D0:1D:F3:6F:57:8E:BE:57)"
           # Verify alias + store password via openssl (works on PKCS12,
           # unlike keytool -keypasswd). Anything off falls back to
           # debug signing instead of failing the build.
