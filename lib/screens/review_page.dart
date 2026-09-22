@@ -115,6 +115,9 @@ class _ReviewState extends State<ReviewPage> {
     }
     var reverseMode = false;
     var shuffle = false;
+    // Sequential mode (default): the meaning pass does not grade;
+    // the follow-up writing check does the real grading.
+    var sequential = true;
     // A shuffled copy; the underlying lists stay in stable order.
     List<Word> ordered() {
       if (!shuffle) return readyWords;
@@ -144,6 +147,12 @@ class _ReviewState extends State<ReviewPage> {
                       value: reverseMode,
                       onChanged: (v) => setSheet(() => reverseMode = v)),
                   SwitchListTile(
+                      title: const Text('ترتیبی: بعدش چک نوشتاری'),
+                      subtitle:
+                          const Text('اول معنی، بعد نوشتن، بعد باکس بعدی'),
+                      value: sequential,
+                      onChanged: (v) => setSheet(() => sequential = v)),
+                  SwitchListTile(
                       title: const Text('ترتیب تصادفی'),
                       subtitle: const Text('کارت‌ها به ترتیب قاطی می‌شوند'),
                       value: shuffle,
@@ -156,6 +165,7 @@ class _ReviewState extends State<ReviewPage> {
                         Navigator.pop(sheet);
                         _open(ReviewSession(
                             words: ordered(),
+                            gradeOnAnswer: !sequential,
                             title: reverseMode
                                 ? '${_sessionTitle(b)} (معکوس)'
                                 : _sessionTitle(b),

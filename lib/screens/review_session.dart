@@ -6,6 +6,7 @@ import '../services/audio_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import '../services/streak_service.dart';
+import 'writing_review.dart';
 
 class ReviewSession extends StatefulWidget {
   final List<Word> words;
@@ -279,11 +280,22 @@ class _ReviewSessionState extends State<ReviewSession> {
     }
   }
 
-  /// Called only when the user grades the LAST card — i.e. actually
+  /// Called only when the user answers the LAST card — i.e. actually
   /// finishes the session — never on mere navigation away.
   Future<void> _finishSession() async {
     _streakRecorded = true;
     await StreakService.recordStudySession(wordsStudied: _answered);
+    if (!widget.gradeOnAnswer && mounted) {
+      // Sequential mode: the meaning pass did not grade, so hand the
+      // same words to the writing check, which does the real grading.
+      // (The not-due extra pile is skipped in this mode.)
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (_) => WritingReviewSession(
+                  words: widget.words, title: 'نوشتاری — ${widget.title}')));
+      return;
+    }
     if (widget.extra.isNotEmpty && mounted) {
       final go = await showDialog<bool>(
         context: context,

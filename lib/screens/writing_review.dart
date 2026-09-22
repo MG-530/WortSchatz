@@ -63,6 +63,20 @@ class _WritingReviewState extends State<WritingReviewSession> {
     if (checked) return;
     setState(() {
       typed += ch;
+      // Consume the used hint letter so it disappears from the pool.
+      letters.remove(ch);
+      input.text = typed;
+      input.selection = TextSelection.collapsed(offset: typed.length);
+    });
+  }
+
+  /// Delete the last typed character and return it to the hint pool.
+  void backspace() {
+    if (checked || typed.isEmpty) return;
+    setState(() {
+      final ch = typed[typed.length - 1];
+      typed = typed.substring(0, typed.length - 1);
+      letters.add(ch);
       input.text = typed;
       input.selection = TextSelection.collapsed(offset: typed.length);
     });
@@ -76,19 +90,32 @@ class _WritingReviewState extends State<WritingReviewSession> {
     final ok = w.matchesSpelling(input.text);
     await VocabularyDb.instance.grade(w, ok);
     _graded++;
-    setState(() {
-      checked = true;
-      correct = ok;
-    });
+    if (mounted) {
+      setState(() {
+        checked = true;
+        correct = ok;
+      });
+      _autoNext();
+    }
   }
 
   Future<void> unknown() async {
     if (checked) return;
     await VocabularyDb.instance.grade(w, false);
     _graded++;
-    setState(() {
-      checked = true;
-      correct = false;
+    if (mounted) {
+      setState(() {
+        checked = true;
+        correct = false;
+      });
+      _autoNext();
+    }
+  }
+
+  /// Show the verdict briefly, then move on automatically.
+  void _autoNext() {
+    Future.delayed(const Duration(milliseconds: 1300), () {
+      if (mounted && checked) next();
     });
   }
 
@@ -130,14 +157,21 @@ class _WritingReviewState extends State<WritingReviewSession> {
               Text(w.english, style: TextStyle(color: Colors.grey.shade700)),
               IconButton.filled(
                   onPressed: listen, icon: const Icon(Icons.volume_up)),
-              TextField(
-                  controller: input,
-                  autofocus: true,
-                  enabled: !checked,
-                  textDirection: ui.TextDirection.ltr,
-                  decoration: const InputDecoration(
-                      labelText: 'آلمانی را تایپ کن',
-                      border: OutlineInputBorder())),
+              Row(children: [
+                Expanded(
+                    child: TextField(
+                        controller: input,
+                        autofocus: true,
+                        enabled: !checked,
+                        textDirection: ui.TextDirection.ltr,
+                        decoration: const InputDecoration(
+                            labelText: 'آلمانی را تایپ کن',
+                            border: OutlineInputBorder()))),
+                IconButton(
+                    tooltip: 'پاک کردن حرف آخر',
+                    onPressed: checked || typed.isEmpty ? null : backspace,
+                    icon: const Icon(Icons.backspace_outlined))
+              ]),
               if (hint)
                 Wrap(spacing: 6, runSpacing: 6, children: [
                   for (final ch in letters)
@@ -164,21 +198,37 @@ class _WritingReviewState extends State<WritingReviewSession> {
                     icon: const Icon(Icons.close),
                     label: const Text('بلد نیستم'))
               else
-                Column(children: [
-                  Text(
-                      correct
-                          ? 'درست است'
-                          : 'غلط است — واژه به باکس قبلی برگشت',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: correct ? Colors.green : Colors.red)),
-                  FilledButton.icon(
-                      onPressed: next,
-                      icon: const Icon(Icons.arrow_forward),
-                      label:
-                          Text(i + 1 >= widget.words.length ? 'پایان' : 'بعدی'))
-                ])
+                AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 350),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
+                    child: Container(
+                        key: ValueKey('verdict$i$correct'),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                            color: (correct ? Colors.green : Colors.red)
+                                .withValues(alpha: .12),
+                            borderRadius: BorderRadius.circular(12)),
+                        child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(correct ? Icons.check_circle : Icons.cancel,
+                                  color: correct ? Colors.green : Colors.red),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                  child: Text(
+                                      correct
+                                          ? 'درست است! آفرین'
+                                          : 'اشتباه شد — جواب: ${w.display}',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: correct
+                                              ? Colors.green.shade800
+                                              : Colors.red.shade800)))
+                            ])))
             ])));
   }
 }
