@@ -120,16 +120,16 @@ class _LearnState extends State<LearnSession> {
                                       ])))))),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 FilledButton.icon(
-                    onPressed: () => move(-1),
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text('قبلی')),
+                    onPressed: () => move(1),
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('بعدی')),
                 IconButton.filledTonal(
                     onPressed: () => playWord(w, online: online),
                     icon: const Icon(Icons.volume_up)),
                 FilledButton.icon(
-                    onPressed: () => move(1),
-                    icon: const Icon(Icons.arrow_forward),
-                    label: const Text('بعدی'))
+                    onPressed: () => move(-1),
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('قبلی'))
               ])
             ])));
   }

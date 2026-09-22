@@ -124,6 +124,14 @@ class _ArticleQuizState extends State<ArticleQuizPage> {
     return null;
   }
 
+  /// Option text in its gender color (same palette as the app).
+  Color articleColor(String a) => switch (a) {
+        'der' => const Color(0xff2979ff),
+        'die' => const Color(0xffe85aad),
+        'das' => const Color(0xff22a06b),
+        _ => Colors.grey,
+      };
+
   bool get wasCorrect => locked && picked == x!.article;
 
   /// Animated verdict banner: pops in on every answer and always names
@@ -250,10 +258,11 @@ class _ArticleQuizState extends State<ArticleQuizPage> {
                                                     child: Text(a,
                                                         textDirection: ui
                                                             .TextDirection.ltr,
-                                                        style: const TextStyle(
+                                                        style: TextStyle(
                                                             fontSize: 24,
                                                             fontWeight:
-                                                                FontWeight.bold)))))),
+                                                                FontWeight.bold,
+                                                            color: locked ? null : articleColor(a))))))),
                                   const SizedBox(height: 12),
                                   verdictBanner(),
                                   const SizedBox(height: 8),

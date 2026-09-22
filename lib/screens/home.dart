@@ -227,16 +227,6 @@ class _DashboardState extends State<Dashboard> {
                               ]))
                         ])))),
             Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Card(
-                    // Theme-aware (not hardcoded): stays readable in dark mode.
-                    color: Theme.of(c).colorScheme.primaryContainer,
-                    child: const Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Text(
-                            'یک درس انتخاب کن، واژه‌ها را یاد بگیر و با تمرین و لایتنر تثبیت کن.',
-                            style: TextStyle(fontSize: 17))))),
-            Padding(
                 padding: const EdgeInsets.all(20),
                 child: GridView.count(
                     shrinkWrap: true,
