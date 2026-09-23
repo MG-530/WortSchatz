@@ -115,9 +115,6 @@ class _ReviewState extends State<ReviewPage> {
     }
     var reverseMode = false;
     var shuffle = false;
-    // Sequential mode (default): the meaning pass does not grade;
-    // the follow-up writing check does the real grading.
-    var sequential = true;
     // A shuffled copy; the underlying lists stay in stable order.
     List<Word> ordered() {
       if (!shuffle) return readyWords;
@@ -147,25 +144,20 @@ class _ReviewState extends State<ReviewPage> {
                       value: reverseMode,
                       onChanged: (v) => setSheet(() => reverseMode = v)),
                   SwitchListTile(
-                      title: const Text('ترتیبی: بعدش چک نوشتاری'),
-                      subtitle:
-                          const Text('اول معنی، بعد نوشتن، بعد باکس بعدی'),
-                      value: sequential,
-                      onChanged: (v) => setSheet(() => sequential = v)),
-                  SwitchListTile(
                       title: const Text('ترتیب تصادفی'),
                       subtitle: const Text('کارت‌ها به ترتیب قاطی می‌شوند'),
                       value: shuffle,
                       onChanged: (v) => setSheet(() => shuffle = v)),
+                  const Divider(),
                   ListTile(
                       leading: const Icon(Icons.style),
-                      title: const Text('مرور عادی'),
+                      title: const Text('فقط عادی'),
                       subtitle: Text('${readyWords.length} واژه آماده مرور'),
                       onTap: () {
                         Navigator.pop(sheet);
                         _open(ReviewSession(
                             words: ordered(),
-                            gradeOnAnswer: !sequential,
+                            gradeOnAnswer: true,
                             title: reverseMode
                                 ? '${_sessionTitle(b)} (معکوس)'
                                 : _sessionTitle(b),
@@ -174,12 +166,25 @@ class _ReviewState extends State<ReviewPage> {
                       }),
                   ListTile(
                       leading: const Icon(Icons.keyboard),
-                      title: const Text('مرور نوشتاری'),
+                      title: const Text('فقط نوشتاری'),
                       subtitle: Text('${readyWords.length} واژه آماده نوشتاری'),
                       onTap: () {
                         Navigator.pop(sheet);
                         _open(WritingReviewSession(
                             words: ordered(), title: _writingTitle(b)));
+                      }),
+                  ListTile(
+                      leading: const Icon(Icons.swap_horiz),
+                      title: const Text('ترکیبی'),
+                      subtitle: const Text('اول معنی، بعد چک نوشتاری درست‌ها'),
+                      onTap: () {
+                        Navigator.pop(sheet);
+                        _open(ReviewSession(
+                            words: ordered(),
+                            gradeOnAnswer: false,
+                            title: '${_sessionTitle(b)} (ترکیبی)',
+                            extra: const [],
+                            reverseMode: reverseMode));
                       })
                 ]))));
   }

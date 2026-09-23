@@ -112,9 +112,7 @@ class _StatsPageState extends State<StatsPage> {
         body: !loaded
             ? const Center(child: CircularProgressIndicator())
             : ListView(children: [
-                const Header('دقت جواب‌ها',
-                    subtitle:
-                        'از وقتی شمارش فعال شده (جلسات قدیمی حساب نیستند)'),
+                const Header('دقت جواب‌ها'),
                 Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Card(

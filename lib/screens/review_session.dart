@@ -46,6 +46,10 @@ class _ReviewSessionState extends State<ReviewSession> {
   /// swipe or back) is locked until the user answers — no skipping.
   bool _graded = false;
 
+  /// Indices answered "known" (latest answer wins). The sequential
+  /// writing follow-up only checks these — wrong answers never go on.
+  final Set<int> _correctIdx = {};
+
   /// Plural forms for this session's nouns (one batch query).
   Map<String, String> plurals = {};
 
@@ -253,7 +257,7 @@ class _ReviewSessionState extends State<ReviewSession> {
                         onPressed: widget.words.length <= 1 || !_graded
                             ? null
                             : _goBack,
-                        icon: const Icon(Icons.arrow_back),
+                        icon: const Icon(Icons.arrow_forward),
                         label: const Text('قبلی')))
               ])
             ])));
@@ -270,6 +274,11 @@ class _ReviewSessionState extends State<ReviewSession> {
       VocabularyDb.instance.grade(widget.words[i], known);
     }
     StreakService.recordAnswer(correct: known);
+    if (known) {
+      _correctIdx.add(i);
+    } else {
+      _correctIdx.remove(i);
+    }
     _answered++;
     _graded = true;
     if (i + 1 < widget.words.length) {
@@ -285,14 +294,26 @@ class _ReviewSessionState extends State<ReviewSession> {
     _streakRecorded = true;
     await StreakService.recordStudySession(wordsStudied: _answered);
     if (!widget.gradeOnAnswer && mounted) {
-      // Sequential mode: the meaning pass did not grade, so hand the
-      // same words to the writing check, which does the real grading.
+      // Sequential mode: only words answered correctly in the meaning
+      // pass go on to the writing check (which does the real grading).
       // (The not-due extra pile is skipped in this mode.)
+      final idxs = _correctIdx.toList()..sort();
+      final ready = [
+        for (final k in idxs)
+          if (k < widget.words.length) widget.words[k]
+      ];
+      if (ready.isEmpty) {
+        final messenger = ScaffoldMessenger.of(context);
+        Navigator.pop(context);
+        messenger.showSnackBar(
+            const SnackBar(content: Text('واژه درستی برای چک نوشتاری نیست')));
+        return;
+      }
       Navigator.pushReplacement(
           context,
           MaterialPageRoute(
               builder: (_) => WritingReviewSession(
-                  words: widget.words, title: 'نوشتاری — ${widget.title}')));
+                  words: ready, title: 'نوشتاری — ${widget.title}')));
       return;
     }
     if (widget.extra.isNotEmpty && mounted) {
